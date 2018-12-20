@@ -1,0 +1,28 @@
+/target/
+**/*.rs.bk
+/.idea/*
+Cargo.lock
+repubin.tantivy/*
+.emacs.desktop
+.DS_Store
+frontend/node_modules
+frontend/dist
+
+# local env files
+.env.local
+.env.*.local
+
+# Log files
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/yarn.lock
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw*
