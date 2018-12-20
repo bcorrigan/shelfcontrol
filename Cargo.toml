@@ -1,0 +1,17 @@
+[package]
+name = "repubin"
+version = "0.1.0"
+authors = ["bcorrigan <b.j.corrigan@gmail.com>"]
+
+[dependencies]
+epub = "1.2.0"
+#epub = { path = "/home/bc/workspace/epub-rs", version = "1.2.0" }
+#rusqlite = "0.15.0"
+clap = "2.32.0"
+tantivy = "0.7.1"
+walkdir = "2"
+chrono = "0.4"
+rouille = "2.2.0"
+serde_json = "1.0"
+serde = "1.0"
+serde_derive = "1.0"
