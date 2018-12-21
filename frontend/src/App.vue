@@ -108,7 +108,8 @@
                     >
                     {{book.creator}}
                   </span><br>
-                  <span>{{book.description}}</span><br><br>
+                  <span v-html="book.description"></span>
+                  <br><br>
                   <h4><span
                         style="cursor: pointer"
                         @click="dosearchof('publisher:&quot;' + book.publisher + '&quot;')"
