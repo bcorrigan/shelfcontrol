@@ -1,4 +1,4 @@
-use tantivy::collector::{chain, CountCollector, TopCollector};
+use tantivy::collector::{Count, TopDocs};
 use tantivy::query::QueryParser;
 use tantivy::query::QueryParserError;
 use tantivy::query::QueryParserError::*;
@@ -46,29 +46,25 @@ pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
 
                     //in theory we could cache the searcher for subsequent queries with a higher startat.. but too complex for now
                     let start_pos = request.get_param("start").unwrap_or("0".to_string()).parse::<usize>().unwrap();
-                    let mut top_collector = TopCollector::with_limit(request.get_param("limit").unwrap_or("20".to_string()).parse::<usize>().unwrap() + start_pos);
-                    let mut count_collector = CountCollector::default();
+                    let mut top_collector = TopDocs::with_limit(request.get_param("limit").unwrap_or("20".to_string()).parse::<usize>().unwrap() + start_pos);
+                    let mut count_collector = Count;
 
                     // When viewing the home page, we return an HTML document described below.
                     let query = match query_parser.parse_query(&request.get_param("query").unwrap()) {
                         Err(e) => return rouille::Response::from_data("application/json", format!( "{{\"error\":[{}]}}", serde_json::to_string(&get_query_error(e)).unwrap())),
                         Ok(q) => q
                     };
-                    {
-                        let mut collectors = chain().push(&mut top_collector).push(&mut count_collector);
-                            searcher.search(&*query, &mut collectors);
-                    }
 
-                    let docs = top_collector.docs();
+                    let docs = searcher.search(&*query, &(top_collector, count_collector)).unwrap();
 
-                    let num_docs = docs.len();
+                    let num_docs = docs.0.len();
                     let mut i = 0;
 
-                    let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", count_collector.count(), start_pos, &request.get_param("query").unwrap()).to_owned();
-                    for doc in docs {
+                    let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start_pos, &request.get_param("query").unwrap()).to_owned();
+                    for doc in docs.0 {
                         i+=1;
                         if i>start_pos {
-                            let retrieved = searcher.doc(doc).unwrap();
+                            let retrieved = searcher.doc(doc.1).unwrap();
 
                             json_str.push_str(&serde_json::to_string(&to_bm(&retrieved, &schema)).unwrap());
 
@@ -94,13 +90,11 @@ pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
                     let term_query = TermQuery::new(id_term, IndexRecordOption::Basic);
 
                     //could this be better with TopFieldCollector which uses a FAST field?
-                    let mut top_collector = TopCollector::with_limit(1);
-                    searcher.search(&term_query, &mut top_collector);
+                    let docs = searcher.search(&term_query, &TopDocs::with_limit(1)).unwrap();
 
-                    let docs = top_collector.docs();
-                       if docs.len()==1 {
+                    if docs.len()==1 {
                         //ok doing it inline like this for a very low use server
-                        let retrieved = searcher.doc(docs.first().unwrap().to_owned()).unwrap();
+                        let retrieved = searcher.doc(docs.first().unwrap().1.to_owned()).unwrap();
                         //get the cover
                         println!("Val:{:?}", retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap());
                         let mut doc = EpubDoc::new(retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap()).unwrap();
@@ -156,10 +150,10 @@ fn get_tags(field: &str, doc: &tantivy::Document, schema: &Schema) -> Option<Vec
     for v in vals {
         tags.push(
             match v {
-                Facet(f) => std::str::from_utf8(f.encoded_bytes()).unwrap(),
+                Facet(f) => f.encoded_str(),
                 _ => "",
             }
-            .to_string(),
+                .to_string(),
         )
     }
 
