@@ -5,6 +5,9 @@ extern crate epub;
 extern crate tantivy;
 extern crate walkdir;
 extern crate chrono;
+extern crate ammonia;
+#[macro_use]
+extern crate maplit;
 #[macro_use]
 extern crate rouille;
 
@@ -12,6 +15,7 @@ extern crate rouille;
 extern crate serde_derive;
 extern crate serde;
 extern crate serde_json;
+extern crate core;
 
 use std::fs;
 use std::error::Error;

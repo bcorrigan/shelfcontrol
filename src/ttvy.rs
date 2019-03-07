@@ -5,6 +5,7 @@ use std::fs;
 use std::process;
 use std::path::Path;
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 //extern crate tantivy;
 use tantivy::schema::*;
@@ -12,11 +13,15 @@ use tantivy::Index;
 use tantivy::IndexWriter;
 use tantivy::directory::MmapDirectory;
 
+use ammonia::{Builder, UrlRelative};
+use maplit;
+
 
 use BookWriter;
 use BookMetadata;
+use core::borrow::{BorrowMut, Borrow};
 
-pub struct TantivyWriter {
+pub struct TantivyWriter<'a> {
     dir:String,
     index:Index,
     index_writer:IndexWriter,
@@ -31,10 +36,11 @@ pub struct TantivyWriter {
     pubdate:Field,
     moddate:Field,
     tags: Field,
+    sanitiser: Builder<'a>,
 }
 
-impl TantivyWriter {
-    pub fn new(dir: String) -> Result<TantivyWriter, tantivy::TantivyError> {
+impl<'a> TantivyWriter<'a> {
+    pub fn new(dir: String) -> Result<TantivyWriter<'a>, tantivy::TantivyError> {
         if Path::new(&dir).exists() {
             println!("Error: Must remove directory {} to run.", &dir);
             process::exit(3);
@@ -62,6 +68,13 @@ impl TantivyWriter {
         let index = Index::create(mmap_dir, schema.clone())?;
 		let writer = index.writer(50_000_000)?;
 
+        let mut b = Builder::default();
+        {
+            b.link_rel(None)
+                .url_relative(UrlRelative::PassThrough)
+                .tags(hashset!["b","i","p","a","blockquote","code","q","em", "br", "ul", "u", "tt", "tr", "th", "td", "ol", "li", "h6", "h5", "h4", "h3", "abbr"]);
+        }
+
         Ok( TantivyWriter {dir: dir,
                            index: index,
                            index_writer: writer,
@@ -76,11 +89,12 @@ impl TantivyWriter {
                            pubdate: pubdate,
                            moddate: moddate,
                            tags: tags,
+                           sanitiser: b,
                            } )
     }
 }
 
-impl BookWriter for TantivyWriter {
+impl<'a> BookWriter for TantivyWriter<'a> {
     fn write_tags(&self, tags: HashMap<String, Vec<i64>>, limit:usize ) -> Result<(), Box<Error>> {
 		//not sure if facets can be added later in tantivy??
         Ok(())
@@ -93,7 +107,7 @@ impl BookWriter for TantivyWriter {
             let mut ttdoc = Document::default();
             ttdoc.add_i64( self.id, bm.id );
             ttdoc.add_text( self.title, &bm.title.unwrap_or("".to_string()) );
-            ttdoc.add_text( self.description, &bm.description.unwrap_or("".to_string()));
+            ttdoc.add_text( self.description, self.sanitiser.clean( &bm.description.unwrap_or("".to_string())).to_string().as_str());
             ttdoc.add_text( self.publisher, &bm.publisher.unwrap_or("".to_string()));
             ttdoc.add_text( self.creator, &bm.creator.unwrap_or("".to_string()));
             ttdoc.add_text( self.file, &bm.file);
