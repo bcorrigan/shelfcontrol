@@ -59,8 +59,8 @@ pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
 
                     let num_docs = docs.0.len();
                     let mut i = 0;
-
-                    let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start_pos, &request.get_param("query").unwrap()).to_owned();
+                    //json encode query value
+                    let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start_pos, &request.get_param("query").unwrap().replace("\"","\\\"")).to_owned();
                     for doc in docs.0 {
                         i+=1;
                         if i>start_pos {

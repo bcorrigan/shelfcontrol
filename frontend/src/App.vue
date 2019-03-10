@@ -133,7 +133,12 @@
                                     <v-spacer class="v-spacer">&nbsp;</v-spacer>
                               </span>
                               </v-layout>
-                                <v-btn flat color="orange">Download</v-btn>
+                                <v-tooltip bottom>
+                                  <template v-slot:activator="{ on }">
+                                    <v-btn flat color="orange" v-on="on">Download</v-btn>
+                                  </template>
+                                  <span>{{(book.filesize / 1048576).toFixed(2)}} Mb</span>
+                                </v-tooltip>
                               </v-card-actions>
                     </v-layout>
                   </v-flex>
