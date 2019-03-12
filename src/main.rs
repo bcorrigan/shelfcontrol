@@ -129,7 +129,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
             .short("D")
             .long("dbfile")
             .value_name("FILE")
-            .help("If using sqlite/tantivy backend, where is dbfile to be located. Warning: this will erase any existing DB. Default: repubin.sqlite or repubin.tantivy")
+            .help("This is where shelfcontrol settings and index will be located. Warning: this will erase any existing DB. Default: .shelfcontrol")
             .required(false)
             .takes_value(true))
 		.arg(Arg::with_name("directory")
@@ -153,7 +153,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 		.get_matches();
 
 	if matches.is_present("search") {
-		match ttvy::TantivyReader::new( value_t!(matches, "dbfile", String).unwrap_or("repubin.tantivy".to_string())) {
+		match ttvy::TantivyReader::new( value_t!(matches, "dbfile", String).unwrap_or(".shelfcontrol".to_string())) {
 			Ok(reader) => server::serve(reader),
 			Err(_) => panic!("Could not read given index.")
 		};
@@ -161,7 +161,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
     let mut writer: Box<BookWriter> = match matches.value_of("db").unwrap_or("tantivy") {
 		//"sqlite" => Box::new(sqlite::SqliteWriter::new( value_t!(matches, "dbfile", String).unwrap_or("repubin.sqlite".to_string()) )? ),
-		"tantivy" => Box::new ( match ttvy::TantivyWriter::new( value_t!(matches, "dbfile", String).unwrap_or("repubin.tantivy".to_string())) {
+		"tantivy" => Box::new ( match ttvy::TantivyWriter::new( value_t!(matches, "dbfile", String).unwrap_or(".shelfcontrol".to_string())) {
 							Ok(writer) => Ok(writer),
 							Err(_) =>  Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:")))
 						}? ),
@@ -183,7 +183,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 		for entry in WalkDir::new(&dir).into_iter() {
 			match entry {
 	            Ok(l) => {
-					if l.path().display().to_string().ends_with(".epub") {
+					if l.path().display().to_string().ends_with(".epub") && l.file_type().is_file() {
 						total_books+=1;
 					}
 				},
@@ -209,7 +209,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 		for entry in walker {
 	        match entry {
 	            Ok(l) => {
-					if l.path().display().to_string().ends_with(".epub") {
+					if l.path().display().to_string().ends_with(".epub") && l.file_type().is_file() {
 		                match parse_epub(&l.path().display().to_string()) {
 		                    Ok(bm) => {
 		                        if seen_bookids.insert(bm.id.clone()) {
