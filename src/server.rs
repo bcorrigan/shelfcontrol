@@ -84,7 +84,6 @@ pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
                     let searcher = i.searcher();
                     drop(i);
                     let id_field = schema.get_field("id").unwrap();
-                    println!("Searching for {:?}", &id.to_string());
                     let id_term = Term::from_field_i64(id_field, id);
 
                     let term_query = TermQuery::new(id_term, IndexRecordOption::Basic);
@@ -96,11 +95,13 @@ pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
                         //ok doing it inline like this for a very low use server
                         let retrieved = searcher.doc(docs.first().unwrap().1.to_owned()).unwrap();
                         //get the cover
-                        println!("Val:{:?}", retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap());
                         let mut doc = EpubDoc::new(retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap()).unwrap();
-                        let cover = doc.get_cover().unwrap(); //FIXME - cover may not exist, handle it
-                        let mime = doc.get_resource_mime(&doc.get_cover_id().unwrap()).unwrap();
-                        return rouille::Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*");
+                        let cover = doc.get_cover(); //FIXME - cover may not exist, handle it
+                        match doc.get_cover() {
+                            Ok(cover) => { let mime = doc.get_resource_mime(&doc.get_cover_id().unwrap()).unwrap();
+                                         return rouille::Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*"); },
+                            Err(_) => return rouille::Response::empty_404(),
+                        }
                     } else {
                         println!("404 1, found {:?}", docs.len());
                         return rouille::Response::empty_404()
