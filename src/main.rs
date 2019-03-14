@@ -16,6 +16,7 @@ extern crate serde_derive;
 extern crate core;
 extern crate serde;
 extern crate serde_json;
+extern crate itertools;
 
 use chrono::{DateTime, Local};
 use clap::{App, Arg};
@@ -30,6 +31,7 @@ use std::path::Path;
 use std::process;
 use std::time::SystemTime;
 use walkdir::WalkDir;
+use itertools::Itertools;
 
 mod server;
 mod ttvy;
@@ -269,7 +271,7 @@ fn parse_epub(book_loc: &String) -> Result<BookMetadata, Box<Error>> {
 		title: get_first_fd("title", &doc.metadata),
 		description: get_first_fd("description", &doc.metadata),
 		publisher: get_first_fd("publisher", &doc.metadata),
-		creator: get_first_fd("creator", &doc.metadata),
+		creator: get_first_fd("creator", &doc.metadata).map(|s| unmangle_creator(s)),
 		subject: doc.metadata.get("subject").cloned(),
 		file: Path::new(&book_loc).canonicalize().unwrap().display().to_string(),
 		filesize: metadata.len() as i64,
@@ -294,6 +296,30 @@ fn get_first_fd(mdfield: &str, md: &HashMap<String, Vec<String>>) -> Option<Stri
 		Some(vec) => Some(vec.get(0).unwrap().clone()),
 		None => None,
 	}
+}
+
+//Attempt to unmangle author names to be consistent
+fn unmangle_creator(creator: String) -> String {
+	let unspaced_creator = creator.split_whitespace().join(" ");
+	if unspaced_creator.matches(",").count() == 1 {
+		let parts:Vec<&str> = unspaced_creator.split(",").collect();
+		return format!("{} {}",parts[1].trim(), parts[0].trim());
+	}
+	return unspaced_creator;
+}
+
+#[test]
+fn test_unmangle() {
+	let author = "H.P. Lovecraft".to_string();
+	let badauth1 = "Lovecraft, H.P.".to_string();
+	let badauth2 = "Lovecraft,  H.P. ".to_string();
+	let badauth3 = "H.P.  Lovecraft".to_string();
+	let badauth4 = "H.P. \t  Lovecraft".to_string();
+	assert_eq!(author, unmangle_creator(author.clone()));
+	assert_eq!(author, unmangle_creator(badauth1));
+	assert_eq!(author, unmangle_creator(badauth2));
+	assert_eq!(author, unmangle_creator(badauth3));
+	assert_eq!(author, unmangle_creator(badauth4));
 }
 
 fn hash_md(bm: &BookMetadata) -> u64 {
