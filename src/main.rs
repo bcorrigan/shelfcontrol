@@ -310,16 +310,13 @@ fn unmangle_creator(creator: String) -> String {
 
 #[test]
 fn test_unmangle() {
-	let author = "H.P. Lovecraft".to_string();
-	let badauth1 = "Lovecraft, H.P.".to_string();
-	let badauth2 = "Lovecraft,  H.P. ".to_string();
-	let badauth3 = "H.P.  Lovecraft".to_string();
-	let badauth4 = "H.P. \t  Lovecraft".to_string();
-	assert_eq!(author, unmangle_creator(author.clone()));
-	assert_eq!(author, unmangle_creator(badauth1));
-	assert_eq!(author, unmangle_creator(badauth2));
-	assert_eq!(author, unmangle_creator(badauth3));
-	assert_eq!(author, unmangle_creator(badauth4));
+	let lovecraft = "H.P. Lovecraft".to_string();
+	assert_eq!(lovecraft, unmangle_creator(lovecraft.clone()));
+	assert_eq!(lovecraft, unmangle_creator("Lovecraft, H.P.".to_string()));
+	assert_eq!(lovecraft, unmangle_creator("Lovecraft,  H.P. ".to_string()));
+	assert_eq!(lovecraft, unmangle_creator("H.P.  Lovecraft".to_string()));
+	assert_eq!(lovecraft, unmangle_creator("H.P. \t  Lovecraft".to_string()));
+	assert_eq!(lovecraft, unmangle_creator(" H.P.\t \tLovecraft ".to_string()));
 }
 
 fn hash_md(bm: &BookMetadata) -> u64 {

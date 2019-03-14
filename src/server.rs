@@ -50,7 +50,7 @@ pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
 					let mut count_collector = Count;
 
 					// When viewing the home page, we return an HTML document described below.
-					let query = match query_parser.parse_query(&request.get_param("query").unwrap()) {
+					let query = match query_parser.parse_query(&request.get_param("query").unwrap().trim()) {
 						Err(e) => return rouille::Response::from_data("application/json", format!( "{{\"error\":[{}]}}", serde_json::to_string(&get_query_error(e)).unwrap())),
 						Ok(q) => q
 					};
