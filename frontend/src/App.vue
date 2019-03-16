@@ -244,7 +244,10 @@
       },
       dosearch () {
         this.page=1;
-        this.dosearchof(this.searchtext)
+        //change event sometimes lies - it is fired even when text is not changed since last time
+        if(this.searchtext!=this.lastquery) {
+          this.dosearchof(this.searchtext);
+        }
       },
       next (page) {
         this.page=page;
