@@ -1,12 +1,14 @@
 <template>
-  <v-app id="keep">
+  <v-app id="shelfcontrol">
     <v-navigation-drawer
       v-model="drawer"
       fixed
-      clipped
       class="grey lighten-2"
       app
     >
+      <v-spacer class="v-spacer">&nbsp;</v-spacer>
+      <v-spacer class="v-spacer">&nbsp;</v-spacer>
+      <v-spacer class="v-spacer">&nbsp;</v-spacer>
       <v-list
         dense
         class="grey lighten-2"
@@ -36,7 +38,6 @@
           <v-list-tile
             v-else
             :key="i"
-            @click=""
           >
             <v-list-tile-action>
               <v-icon>{{ item.icon }}</v-icon>
@@ -50,7 +51,7 @@
         </template>
       </v-list>
     </v-navigation-drawer>
-    <v-toolbar color="amber darken-1" app absolute clipped-left>
+    <v-toolbar color="amber darken-1" app absolute clipped-left >
       <v-toolbar-side-icon @click="drawer = !drawer"></v-toolbar-side-icon>
       <span class="title ml-3 mr-5">Shelf&nbsp;<span class="font-weight-light">Control</span></span>
       <v-text-field
@@ -157,6 +158,23 @@
           </v-pagination>
         </v-list>
       </v-container>
+      <v-dialog
+        id="cdialog"
+        v-model="coverdialog"
+        @keydown.esc="coverdialog = false"
+        full-width
+        lazy
+      >
+        <v-img
+          class="white--text"
+          contain="false"
+          :src="'http://localhost:8000/img/' + coverid"
+          @click="coverdialog=false"
+          style="cursor: pointer"
+          v-if="coverdialog"
+        >
+        </v-img>
+      </v-dialog>
     </v-content>
     <!--<v-content>
       <v-container fluid fill-height class="grey lighten-4">
@@ -184,23 +202,7 @@
         </v-layout>
       </v-container>
     </v-content>-->
-    <v-dialog
-      id="cdialog"
-      v-model="coverdialog"
-      @keydown.esc="coverdialog = false"
-      full-width
-      lazy
-    >
-      <v-img
-        class="white--text"
-        contain="false"
-        :src="'http://localhost:8000/img/' + coverid"
-        @click="coverdialog=false"
-        style="cursor: pointer"
-        v-if="coverdialog"
-      >
-      </v-img>
-    </v-dialog>
+
   </v-app>
 </template>
 
