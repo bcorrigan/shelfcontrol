@@ -104,7 +104,7 @@
                     <span
                       style="cursor: pointer"
                       class="grey--text text--darken-2"
-                      @click="dosearchof('creator:&quot;' + book.creator + '&quot;')"
+                      @click="clicksearch('creator:&quot;' + book.creator + '&quot;')"
                     >
                     {{book.creator}}
                   </span><br>
@@ -112,7 +112,7 @@
                   <br><br>
                   <h4><span
                         style="cursor: pointer"
-                        @click="dosearchof('publisher:&quot;' + book.publisher + '&quot;')"
+                        @click="clicksearch('publisher:&quot;' + book.publisher + '&quot;')"
                         class="grey--text text--darken-3">{{book.publisher}}</span></h4>
                 </div>
               </v-card-title>
@@ -124,7 +124,7 @@
                                       small
                                       round
                                       color="grey lighten-2"
-                                      @click="dosearchof('tags:&quot;' + tag + '&quot;')"
+                                      @click="clicksearch('tags:&quot;' + tag + '&quot;')"
                                       class="text-lowercase"
                                       >
                                         {{ tag }}
@@ -243,11 +243,15 @@
         .then(response => (this.books = response.data.books , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position))
       },
       dosearch () {
-        this.page=1;
         //change event sometimes lies - it is fired even when text is not changed since last time
-        if(this.searchtext!=this.lastquery) {
+        if(this.searchtext!=this.lastquery || this.page!=1) {
+          this.page=1;
           this.dosearchof(this.searchtext);
         }
+      },
+      clicksearch (param) {
+        this.page=1;
+        this.dosearchof(param);
       },
       next (page) {
         this.page=page;
