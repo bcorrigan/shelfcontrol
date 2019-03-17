@@ -51,7 +51,7 @@
         </template>
       </v-list>
     </v-navigation-drawer>
-    <v-toolbar color="amber darken-1" app absolute clipped-left >
+    <v-toolbar color="amber darken-1" app clipped-left>
       <v-toolbar-side-icon @click="drawer = !drawer"></v-toolbar-side-icon>
       <span class="title ml-3 mr-5">Shelf&nbsp;<span class="font-weight-light">Control</span></span>
       <v-text-field
