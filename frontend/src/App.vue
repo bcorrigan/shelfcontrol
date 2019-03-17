@@ -67,11 +67,15 @@
     </v-toolbar>
     <v-content>
       <v-container fluid fill-height class="grey lighten-4">
+        <v-layout align-center>
+          <v-flex>
+            <span v-html="errorMsg"></span>
         <v-list two-line>
           <v-subheader
             v-if="count"
             :key="count"
             inset
+            id="resultList"
           >
             {{ position + 1 }}-{{ Math.min(position+20,count) }} of {{ count }} results for "{{ lastquery }}"
           </v-subheader>
@@ -157,6 +161,8 @@
              @input="next">
           </v-pagination>
         </v-list>
+      </v-flex>
+    </v-layout>
       </v-container>
       <v-dialog
         id="cdialog"
@@ -176,33 +182,6 @@
         </v-img>
       </v-dialog>
     </v-content>
-    <!--<v-content>
-      <v-container fluid fill-height class="grey lighten-4">
-        <v-layout justify-center align-center>
-          <v-flex shrink>
-            <v-tooltip right>
-              <v-btn
-                slot="activator"
-                :href="source"
-                icon
-                large
-                target="_blank"
-              >
-                <v-icon large>code</v-icon>
-              </v-btn>
-              <span>Source</span>
-            </v-tooltip>
-            <v-tooltip right>
-              <v-btn slot="activator" icon large href="https://codepen.io/johnjleider/pen/jZQNbd" target="_blank">
-                <v-icon large>mdi-codepen</v-icon>
-              </v-btn>
-              <span>Codepen</span>
-            </v-tooltip>
-          </v-flex>
-        </v-layout>
-      </v-container>
-    </v-content>-->
-
   </v-app>
 </template>
 
@@ -226,7 +205,8 @@
       page: 1,
       position: 0,
       lastquery: null,
-      coverdialog: null
+      coverdialog: null,
+      errorMsg: null
     }),
     props: {
       source: String
@@ -239,10 +219,18 @@
     methods: {
       dosearchof (param) {
         this.searchtext = param;
+        this.errorMsg=null;
         window.scrollTo(0,0);
         this.$axios
         .get('http://localhost:8000/api/search?query=' + param + '&limit=20&start='+ ((this.page-1)*20))
-        .then(response => (this.books = response.data.books , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position))
+        .then(response =>
+          (this.books = response.data.books,
+          this.count = response.data.count,
+          this.lastquery = response.data.query,
+          this.position = response.data.position,
+          this.zeroResult()
+          )
+        )
       },
       dosearch () {
         //change event sometimes lies - it is fired even when text is not changed since last time
@@ -258,6 +246,11 @@
       next (page) {
         this.page=page;
         this.dosearchof(this.lastquery);
+      },
+      zeroResult () {
+        if(this.count==0) {
+          this.errorMsg='<h3>No results for \"<b>' + this.lastquery + '</b>\"</h3><p/>&nbsp;<p/>&nbsp;<p/>&nbsp;<p/>&nbsp;';
+        }
       }
     }
   }
