@@ -8,7 +8,7 @@ epub = "1.2.0"
 #epub = { path = "/home/bc/workspace/epub-rs", version = "1.2.0" }
 #rusqlite = "0.15.0"
 clap = "2.32.0"
-tantivy = "0.8.2"
+tantivy = "0.9.1"
 walkdir = "2"
 chrono = "0.4"
 rouille = "3.0.0"

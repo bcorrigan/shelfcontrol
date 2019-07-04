@@ -88,7 +88,7 @@
                 height="400"
                 contain="true"
                 style="cursor: pointer"
-                :src="'http://localhost:8000/img/' + book.id"
+                :src="'http://' + host + ':8000/img/' + book.id"
                 @click="coverid = book.id;  coverdialog = true">
 
                 <!--<v-container fill-height fluid>
@@ -140,7 +140,7 @@
                               </v-layout>
                                 <v-tooltip bottom>
                                   <template v-slot:activator="{ on }">
-                                    <v-btn flat color="orange" v-on="on">Download</v-btn>
+                                    <v-btn flat color="orange" v-on="on" @click="download(book)">Download</v-btn>
                                   </template>
                                   <span>{{(book.filesize / 1048576).toFixed(2)}} Mb</span>
                                 </v-tooltip>
@@ -174,7 +174,7 @@
         <v-img
           class="white--text"
           contain="false"
-          :src="'http://localhost:8000/img/' + coverid"
+          :src="'http://' + host + ':8000/img/' + coverid"
           @click="coverdialog=false"
           style="cursor: pointer"
           v-if="coverdialog"
@@ -206,15 +206,17 @@
       position: 0,
       lastquery: null,
       coverdialog: null,
-      errorMsg: null
+      errorMsg: null,
+      host:null
     }),
     props: {
       source: String
     },
     mounted () {
       this.$axios
-        .get('http://localhost:8000/api/search?query=tolkien&limit=20')
-        .then(response => (this.books = response.data.books , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position))
+        .get('http://' + this.host + ':8000/api/search?query=tolkien&limit=20')
+        .then(response => (this.books = response.data.books , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position));
+      this.host = window.location.hostname;
     },
     methods: {
       dosearchof (param) {
@@ -222,7 +224,7 @@
         this.errorMsg=null;
         window.scrollTo(0,0);
         this.$axios
-        .get('http://localhost:8000/api/search?query=' + param + '&limit=20&start='+ ((this.page-1)*20))
+        .get('http://' + this.host + ':8000/api/search?query=' + param + '&limit=20&start='+ ((this.page-1)*20))
         .then(response =>
           (this.books = response.data.books,
           this.count = response.data.count,
@@ -251,6 +253,25 @@
         if(this.count==0) {
           this.errorMsg='<h3>No results for \"<b>' + this.lastquery + '</b>\"</h3><p/>&nbsp;<p/>&nbsp;<p/>&nbsp;<p/>&nbsp;';
         }
+      },
+      download(book) {
+        this.$axios.get("http://" + this.host + ":8000/api/book/" + book.id,
+        {
+            responseType: 'arraybuffer',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/epub+zip'
+            }
+        })
+        .then((response) => {
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', book.creator + ' - ' + book.title + '.epub'); //or any other extension
+            document.body.appendChild(link);
+            link.click();
+        })
+        .catch((error) => console.log(error));
       }
     }
   }

@@ -17,6 +17,9 @@ use std::error::Error;
 use std::io;
 use std::sync::Mutex;
 
+use std::fs::File;
+use std::io::prelude::*;
+
 /*
 Approach for web:
 
@@ -30,30 +33,29 @@ Approach for web:
 pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
 	println!("Starting server on localhost:8000");
 
-	reader.index.load_searchers()?;
+	//don't think needed anymore?
+	//reader.index.load_searchers()?;
 
-	let index = Mutex::new(reader.index);
+	let t_reader = Mutex::new(reader);
 
-	rouille::start_server("localhost:8000", move |request| {
+	rouille::start_server("192.168.1.61:8000", move |request| {
 		rouille::log(&request, io::stdout(), || {
 			router!(request,
 				(GET) (/api/search) => {
-					let i = index.lock().unwrap();
-					let schema = i.schema();
-					let searcher = i.searcher();
-					let query_parser = QueryParser::for_index(&i, vec![schema.get_field("title").unwrap(), schema.get_field("description").unwrap()]);
-					drop(i);
+					let r = t_reader.lock().unwrap();
+					let searcher = r.reader.searcher();
+
+					// When viewing the home page, we return an HTML document described below.
+					let query = match r.query_parser.parse_query(&request.get_param("query").unwrap().trim()) {
+						Err(e) => return rouille::Response::from_data("application/json", format!( "{{\"error\":[{}]}}", serde_json::to_string(&get_query_error(e)).unwrap())),
+						Ok(q) => q
+					};
+					drop(r);
 
 					//in theory we could cache the searcher for subsequent queries with a higher startat.. but too complex for now
 					let start_pos = request.get_param("start").unwrap_or("0".to_string()).parse::<usize>().unwrap();
 					let mut top_collector = TopDocs::with_limit(request.get_param("limit").unwrap_or("20".to_string()).parse::<usize>().unwrap() + start_pos);
 					let mut count_collector = Count;
-
-					// When viewing the home page, we return an HTML document described below.
-					let query = match query_parser.parse_query(&request.get_param("query").unwrap().trim()) {
-						Err(e) => return rouille::Response::from_data("application/json", format!( "{{\"error\":[{}]}}", serde_json::to_string(&get_query_error(e)).unwrap())),
-						Ok(q) => q
-					};
 
 					let docs = searcher.search(&*query, &(top_collector, count_collector)).unwrap();
 
@@ -66,7 +68,7 @@ pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
 						if i>start_pos {
 							let retrieved = searcher.doc(doc.1).unwrap();
 
-							json_str.push_str(&serde_json::to_string(&to_bm(&retrieved, &schema)).unwrap());
+							json_str.push_str(&serde_json::to_string(&to_bm(&retrieved, &searcher.schema())).unwrap());
 
 							if i!=num_docs {
 								json_str.push_str(",");
@@ -77,12 +79,43 @@ pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
 
 					rouille::Response::from_data("application/json", json_str).with_additional_header("Access-Control-Allow-Origin", "*")
 				},
+			    (GET) (/api/book/{id: i64}) => {
+			        //FIXME so many unwraps, damn
+			        let r = t_reader.lock().unwrap();
+			        let searcher = r.reader.searcher();
+			        let schema = searcher.schema();
+			        drop(r);
+
+			        let id_field = schema.get_field("id").unwrap();
+					let id_term = Term::from_field_i64(id_field, id);
+
+					let term_query = TermQuery::new(id_term, IndexRecordOption::Basic);
+
+					//could this be better with TopFieldCollector which uses a FAST field?
+					let docs = searcher.search(&term_query, &TopDocs::with_limit(1)).unwrap();
+
+			        if docs.len()==1 {
+			            let retrieved = searcher.doc(docs.first().unwrap().1.to_owned()).unwrap();
+                        let file_loc = retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap();
+                        let creator = retrieved.get_first(schema.get_field("creator").unwrap()).unwrap().text().unwrap();
+                        let title = retrieved.get_first(schema.get_field("title").unwrap()).unwrap().text().unwrap();
+                        let mut f = File::open(file_loc).unwrap();
+                        let mut buffer = Vec::new();
+                        // read the whole file
+                        f.read_to_end(&mut buffer).unwrap();
+                        return rouille::Response::from_data("application/epub+zip", buffer).with_additional_header("Access-Control-Allow-Origin", "*")
+                                                                                           .with_content_disposition_attachment(&format!("{} - {}", creator, title));
+			        } else {
+						println!("404 1, found {:?}", docs.len());
+						return rouille::Response::empty_404()
+					}
+			    },
 				(GET) (/img/{id: i64}) => {
 					//FIXME so many unwraps, damn
-					let i = index.lock().unwrap();
-					let schema = i.schema();
-					let searcher = i.searcher();
-					drop(i);
+					let r = t_reader.lock().unwrap();
+					let searcher = r.reader.searcher();
+					let schema = searcher.schema();
+					drop(r);
 					let id_field = schema.get_field("id").unwrap();
 					let id_term = Term::from_field_i64(id_field, id);
 
@@ -202,6 +235,10 @@ fn get_query_error(query_err: QueryParserError) -> ClientError {
 		RangeMustNotHavePhrase => ClientError {
 			name: "Range must not have phrase".to_string(),
 			msg: "Range must not have phrase".to_string(),
+		},
+		DateFormatError(_) => ClientError {
+			name: "Date must have correct format".to_string(),
+			msg: "Date must have correct format".to_string(),
 		},
 	}
 }

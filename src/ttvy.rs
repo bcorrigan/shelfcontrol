@@ -10,7 +10,7 @@ use std::process;
 //extern crate tantivy;
 use tantivy::directory::MmapDirectory;
 use tantivy::schema::*;
-use tantivy::Index;
+use tantivy::{Index, IndexReader, ReloadPolicy};
 use tantivy::IndexWriter;
 
 use ammonia::{Builder, UrlRelative};
@@ -19,6 +19,7 @@ use maplit;
 use core::borrow::{Borrow, BorrowMut};
 use BookMetadata;
 use BookWriter;
+use tantivy::query::QueryParser;
 
 pub struct TantivyWriter<'a> {
 	dir: String,
@@ -48,15 +49,16 @@ impl<'a> TantivyWriter<'a> {
 
 		//build our schema
 		let mut schema_builder = SchemaBuilder::default();
-		let id = schema_builder.add_i64_field("id", INT_STORED | INT_INDEXED);
+		//let id_options = IntOptions::default().set_stored().set_indexed();
+		let id = schema_builder.add_i64_field("id", IntOptions::default().set_stored().set_indexed());
 		let title = schema_builder.add_text_field("title", TEXT | STORED);
 		let description = schema_builder.add_text_field("description", TEXT | STORED);
 		let publisher = schema_builder.add_text_field("publisher", TEXT | STORED);
 		let creator = schema_builder.add_text_field("creator", TEXT | STORED);
 		//subject
 		let file = schema_builder.add_text_field("file", STRING | STORED);
-		let filesize = schema_builder.add_i64_field("filesize", INT_STORED | INT_INDEXED);
-		let modtime = schema_builder.add_i64_field("modtime", INT_STORED | INT_INDEXED);
+		let filesize = schema_builder.add_i64_field("filesize", IntOptions::default().set_stored().set_indexed());
+		let modtime = schema_builder.add_i64_field("modtime", IntOptions::default().set_stored().set_indexed());
 		let pubdate = schema_builder.add_text_field("pubdate", TEXT | STORED);
 		let moddate = schema_builder.add_text_field("moddate", TEXT | STORED);
 		let tags = schema_builder.add_facet_field("tags");
@@ -176,16 +178,26 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 }
 
 pub struct TantivyReader {
+	pub reader: IndexReader,
 	pub index: Index,
+	pub query_parser: QueryParser
 }
 
 impl TantivyReader {
 	pub fn new(index: String) -> Result<TantivyReader, tantivy::TantivyError> {
 		let path = Path::new(&index);
 		let mmap_dir = MmapDirectory::open(path)?;
+		let index = Index::open(mmap_dir)?;
+
+		let query_parser = QueryParser::for_index(&index, vec![index.schema().get_field("title").unwrap(), index.schema().get_field("description").unwrap()]);
 
 		Ok(TantivyReader {
-			index: Index::open(mmap_dir)?,
+			reader: index
+				.reader_builder()
+				.reload_policy(ReloadPolicy::OnCommit)
+				.try_into()?,
+			index: index,
+			query_parser: query_parser
 		})
 	}
 }
