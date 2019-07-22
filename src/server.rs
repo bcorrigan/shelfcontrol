@@ -38,7 +38,7 @@ pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
 
 	let t_reader = Mutex::new(reader);
 
-	rouille::start_server("192.168.1.61:8000", move |request| {
+	rouille::start_server("localhost:8000", move |request| {
 		rouille::log(&request, io::stdout(), || {
 			router!(request,
 				(GET) (/api/search) => {
