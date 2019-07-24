@@ -150,6 +150,12 @@ fn main() -> Result<(), Box<std::error::Error>> {
 			.help("Serve books over http")
 			.required(false)
 			.takes_value(false))
+		.arg(Arg::with_name("coverdir")
+			.short("c")
+			.long("coverdir")
+			.help("Use this directory for cover images. If not specified the server will just extract from epub files on demand, at some performance cost.")
+			.takes_value(true)
+			.required(false))
 		.get_matches();
 
 	if matches.is_present("search") {
