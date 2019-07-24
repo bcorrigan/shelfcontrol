@@ -18,6 +18,7 @@ extern crate serde;
 extern crate serde_json;
 extern crate itertools;
 
+use std::io::Write;
 use chrono::{DateTime, Local};
 use clap::{App, Arg};
 use epub::doc::EpubDoc;
@@ -25,6 +26,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs;
+use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::path::Path;
@@ -165,6 +167,16 @@ fn main() -> Result<(), Box<std::error::Error>> {
 		};
 	}
 
+	let use_coverdir = matches.is_present("coverdir");
+	let coverdir = matches.value_of("coverdir");
+
+	if use_coverdir {
+		if !Path::new(coverdir.unwrap()).exists() {
+			println!("Covers directory {} does not exist.", coverdir.unwrap());
+			process::exit(4);
+		}
+	}
+
 	let mut writer: Box<BookWriter> = match matches.value_of("db").unwrap_or("tantivy") {
 		//"sqlite" => Box::new(sqlite::SqliteWriter::new( value_t!(matches, "dbfile", String).unwrap_or("repubin.sqlite".to_string()) )? ),
 		"tantivy" => Box::new(
@@ -221,6 +233,16 @@ fn main() -> Result<(), Box<std::error::Error>> {
 						match parse_epub(&l.path().display().to_string()) {
 							Ok(bm) => {
 								if seen_bookids.insert(bm.id.clone()) {
+									if use_coverdir {
+										//extract cover image (if present)
+										let mut doc = EpubDoc::new(&bm.file).unwrap();
+										match doc.get_cover() {
+											Ok(cover) => {let mut file = File::create(format!("{}/{}",coverdir.unwrap(),&bm.id))?;
+														  file.write_all(&cover)? },
+											Err(_) => println!("No cover for {}", &bm.file),
+										}
+									}
+
 									books.push(bm);
 									wrote += 1;
 								} else {

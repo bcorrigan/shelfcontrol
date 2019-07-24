@@ -29,7 +29,7 @@ Approach for web:
 4) swc might be a good minifier
 5) see https://refactoringui.com/previews/building-your-color-palette/ for palette advice
 */
-
+#[allow(unreachable_code)]
 pub fn serve(reader: TantivyReader) -> Result<(), tantivy::TantivyError> {
 	println!("Starting server on localhost:8000");
 
