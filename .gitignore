@@ -26,3 +26,5 @@ frontend/yarn.lock
 *.njsproj
 *.sln
 *.sw*
+.project
+.projectile

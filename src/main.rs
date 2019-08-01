@@ -31,9 +31,12 @@ use std::hash::{Hash, Hasher};
 use std::io;
 use std::path::Path;
 use std::process;
+use std::sync::Mutex;
 use std::time::SystemTime;
 use walkdir::WalkDir;
 use itertools::Itertools;
+
+use server::Server;
 
 mod server;
 mod ttvy;
@@ -162,7 +165,15 @@ fn main() -> Result<(), Box<std::error::Error>> {
 
 	if matches.is_present("search") {
 		match ttvy::TantivyReader::new(value_t!(matches, "dbfile", String).unwrap_or(".shelfcontrol".to_string())) {
-			Ok(reader) => server::serve(reader),
+			Ok(reader) => { let server = Server {
+				reader: Mutex::new(reader),
+				host: "localhost".to_string(),
+				port: 8000,
+				use_coverdir: true,
+				coverdir: Some("/somewhere/or/other".to_string())
+			};
+			server.serve()
+		},
 			Err(_) => panic!("Could not read given index."),
 		};
 	}

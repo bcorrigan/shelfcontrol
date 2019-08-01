@@ -180,7 +180,7 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 pub struct TantivyReader {
 	pub reader: IndexReader,
 	pub index: Index,
-	pub query_parser: QueryParser
+	pub query_parser: QueryParser,
 }
 
 impl TantivyReader {
