@@ -139,15 +139,22 @@ Approach for web:
 						let docs = searcher.search(&term_query, &TopDocs::with_limit(1)).unwrap();
 
 						if docs.len()==1 {
-							//ok doing it inline like this for a very low use server
 							let retrieved = searcher.doc(docs.first().unwrap().1.to_owned()).unwrap();
-							//get the cover
-							let mut doc = EpubDoc::new(retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap()).unwrap();
-							let cover = doc.get_cover(); //FIXME - cover may not exist, handle it
-							match doc.get_cover() {
-								Ok(cover) => { let mime = doc.get_resource_mime(&doc.get_cover_id().unwrap()).unwrap();
-											 return rouille::Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*"); },
-								Err(_) => return rouille::Response::empty_404(),
+							if self.use_coverdir {
+								let mut imgfile = File::create(format!("{}/{}",self.coverdir.unwrap(),id)).unwrap();
+								let mut imgbytes = Vec::new();
+								imgfile.read_to_end(&mut imgbytes);
+								let mime = retrieved.get_first(schema.get_field("cover_mime").unwrap()).unwrap().text().unwrap().to_owned();
+								return rouille::Response::from_data(mime, imgbytes).with_additional_header("Access-Control-Allow-Origin", "*");
+							} else {
+								//ok doing it inline like this for a very low use server
+								let mut doc = EpubDoc::new(retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap()).unwrap();
+								let cover = doc.get_cover(); //FIXME - cover may not exist, handle it
+								match doc.get_cover() {
+									Ok(cover) => { let mime = doc.get_resource_mime(&doc.get_cover_id().unwrap()).unwrap();
+											 	return rouille::Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*"); },
+												Err(_) => return rouille::Response::empty_404(),
+								}
 							}
 						} else {
 							println!("404 1, found {:?}", docs.len());
@@ -173,6 +180,7 @@ Approach for web:
 			modtime: self.get_doc_i64("modtime", &doc, &schema),
 			pubdate: self.get_doc_str("pubdate", &doc, &schema),
 			moddate: self.get_doc_str("moddate", &doc, &schema),
+			cover_mime: self.get_doc_str("cover_mime", &doc, &schema),
 		}
 	}
 
