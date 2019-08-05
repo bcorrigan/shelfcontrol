@@ -57,6 +57,7 @@ pub struct BookMetadata {
 	modtime: i64,
 	pubdate: Option<String>,
 	moddate: Option<String>,
+	cover_mime: Option<String>,
 }
 
 //Javascript can't cope with i64 so we use this for ID field to translate to string
@@ -241,19 +242,9 @@ fn main() -> Result<(), Box<std::error::Error>> {
 			match entry {
 				Ok(l) => {
 					if l.path().display().to_string().ends_with(".epub") && l.file_type().is_file() {
-						match parse_epub(&l.path().display().to_string()) {
+						match parse_epub(&l.path().display().to_string(), use_coverdir, coverdir) {
 							Ok(bm) => {
 								if seen_bookids.insert(bm.id.clone()) {
-									if use_coverdir {
-										//extract cover image (if present)
-										let mut doc = EpubDoc::new(&bm.file).unwrap();
-										match doc.get_cover() {
-											Ok(cover) => {let mut file = File::create(format!("{}/{}",coverdir.unwrap(),&bm.id))?;
-														  file.write_all(&cover)? },
-											Err(_) => println!("No cover for {}", &bm.file),
-										}
-									}
-
 									books.push(bm);
 									wrote += 1;
 								} else {
@@ -293,8 +284,8 @@ fn main() -> Result<(), Box<std::error::Error>> {
 	writer.write_tags(tags, 10)
 }
 
-fn parse_epub(book_loc: &String) -> Result<BookMetadata, Box<Error>> {
-	let doc = EpubDoc::new(&book_loc)?;
+fn parse_epub(book_loc: &String, use_coverdir:bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<Error>> {
+	let mut doc = EpubDoc::new(&book_loc)?;
 	//	println!("Got doc! {}", &book_loc);
 	let metadata = fs::metadata(&book_loc)?;
 	let modtime = match metadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH) {
@@ -304,6 +295,17 @@ fn parse_epub(book_loc: &String) -> Result<BookMetadata, Box<Error>> {
 			Err(_) => panic!("Impossible time for {}", &book_loc),
 		},
 	};
+
+	let cover_img = if use_coverdir {
+		doc.get_cover().ok()
+	} else { None };
+
+	let cover_mime = if use_coverdir {
+		match doc.get_cover_id() {
+			Ok(cover_id) => doc.get_resource_mime(&cover_id).ok() ,
+			Err(_) => None,
+		}
+	} else { None };
 
 	let mut bm = BookMetadata {
 		id: 0i64,
@@ -317,9 +319,18 @@ fn parse_epub(book_loc: &String) -> Result<BookMetadata, Box<Error>> {
 		modtime: modtime,
 		pubdate: get_first_fd("date", &doc.metadata),
 		moddate: get_first_fd("date", &doc.metadata),
+		cover_mime: cover_mime
 	};
 
 	bm.id = hash_md(&bm) as i64;
+
+	if use_coverdir {
+		match cover_img {
+			Some(cover) => { let mut file = File::create(format!("{}/{}",coverdir.unwrap(),&bm.id))?;
+							 file.write_all(&cover)? },
+			None => println!("No cover for {}", &bm.file)
+		}
+	}
 
 	/*println!(
 		"extracted:{} by {}",
