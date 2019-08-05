@@ -141,15 +141,21 @@ Approach for web:
 						if docs.len()==1 {
 							let retrieved = searcher.doc(docs.first().unwrap().1.to_owned()).unwrap();
 							if self.use_coverdir {
-								let mut imgfile = File::create(format!("{}/{}",self.coverdir.unwrap(),id)).unwrap();
+								let mime = match retrieved.get_first(schema.get_field("cover_mime").unwrap()) {
+									Some(mime) => mime.text().unwrap().to_owned(),
+									None =>  return rouille::Response::empty_404()
+								};
+								let mut imgfile = File::open(format!("{}/{}",self.coverdir.clone().unwrap(),id)).unwrap();
 								let mut imgbytes = Vec::new();
-								imgfile.read_to_end(&mut imgbytes);
-								let mime = retrieved.get_first(schema.get_field("cover_mime").unwrap()).unwrap().text().unwrap().to_owned();
-								return rouille::Response::from_data(mime, imgbytes).with_additional_header("Access-Control-Allow-Origin", "*");
+								match imgfile.read_to_end(&mut imgbytes) {
+									Ok(_) => {
+										return rouille::Response::from_data(mime, imgbytes).with_additional_header("Access-Control-Allow-Origin", "*");
+									},
+									Err(_) => return rouille::Response::empty_404(),
+								}
 							} else {
 								//ok doing it inline like this for a very low use server
 								let mut doc = EpubDoc::new(retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap()).unwrap();
-								let cover = doc.get_cover(); //FIXME - cover may not exist, handle it
 								match doc.get_cover() {
 									Ok(cover) => { let mime = doc.get_resource_mime(&doc.get_cover_id().unwrap()).unwrap();
 											 	return rouille::Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*"); },
