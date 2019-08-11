@@ -145,6 +145,10 @@ Approach for web:
 									Some(mime) => mime.text().unwrap().to_owned(),
 									None =>  return rouille::Response::empty_404()
 								};
+								if(mime.is_empty()) {
+									return rouille::Response::empty_404();
+								}
+								
 								let mut imgfile = File::open(format!("{}/{}",self.coverdir.clone().unwrap(),id)).unwrap();
 								let mut imgbytes = Vec::new();
 								match imgfile.read_to_end(&mut imgbytes) {
@@ -193,7 +197,10 @@ Approach for web:
 	//I *know* the fields are present in schema, and I *know* that certain fields eg id are always populated, so just unwrap() here
 	fn get_doc_str(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> Option<String> {
 		doc.get_first(schema.get_field(field).unwrap())
-			.map(|v| v.text().unwrap().to_string())
+			.map(|val| match val.text() {
+				Some(t) => return t.to_string(),
+				_ => return "".to_string()
+			})
 	}
 
 	fn get_doc_i64(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> i64 {
