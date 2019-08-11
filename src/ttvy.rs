@@ -35,6 +35,7 @@ pub struct TantivyWriter<'a> {
 	modtime: Field,
 	pubdate: Field,
 	moddate: Field,
+	cover_mime: Field,
 	tags: Field,
 	sanitiser: Builder<'a>,
 }
@@ -61,6 +62,7 @@ impl<'a> TantivyWriter<'a> {
 		let modtime = schema_builder.add_i64_field("modtime", IntOptions::default().set_stored().set_indexed());
 		let pubdate = schema_builder.add_text_field("pubdate", TEXT | STORED);
 		let moddate = schema_builder.add_text_field("moddate", TEXT | STORED);
+		let cover_mime = schema_builder.add_text_field("cover_mime", TEXT | STORED);
 		let tags = schema_builder.add_facet_field("tags");
 		let schema = schema_builder.build();
 		let path_dir = dir.clone();
@@ -111,6 +113,7 @@ impl<'a> TantivyWriter<'a> {
 			modtime: modtime,
 			pubdate: pubdate,
 			moddate: moddate,
+			cover_mime: cover_mime,
 			tags: tags,
 			sanitiser: b,
 		})
@@ -141,6 +144,7 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 			ttdoc.add_i64(self.modtime, bm.modtime);
 			ttdoc.add_text(self.pubdate, &bm.pubdate.unwrap_or("".to_string()));
 			ttdoc.add_text(self.moddate, &bm.moddate.unwrap_or("".to_string()));
+			ttdoc.add_text(self.cover_mime, &bm.cover_mime.unwrap_or("".to_string()));
 
 			if bm.subject.is_some() {
 				for subject in &bm.subject.unwrap() {
