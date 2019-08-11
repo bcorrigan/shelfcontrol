@@ -171,7 +171,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 				host: "localhost".to_string(),
 				port: 8000,
 				use_coverdir: true,
-				coverdir: Some("/somewhere/or/other".to_string())
+				coverdir: Some(value_t!(matches, "coverdir", String).unwrap_or(".shelfcontrol/covers".to_string()))
 			};
 			server.serve()
 		},
