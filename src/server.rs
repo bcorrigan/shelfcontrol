@@ -13,13 +13,12 @@ use tantivy::schema::Term;
 use epub::doc::EpubDoc;
 
 use std::io;
-use std::sync::Mutex;
 
 use std::fs::File;
 use std::io::prelude::*;
 
 pub struct Server {
-	pub reader: Mutex<TantivyReader>,
+	pub reader: TantivyReader,
 	pub host: String,
 	pub port: u32,
 	pub use_coverdir: bool,
@@ -56,22 +55,21 @@ Approach for web:
 			rouille::log(&request, io::stdout(), || {
 				router!(request,
 					(GET) (/api/search) => {
-						let r = &self.reader.lock().unwrap();
-						let searcher = r.reader.searcher();
+						let searcher = &self.reader.reader.searcher();
+						let q = &self.reader.query_parser.parse_query(&request.get_param("query").unwrap().trim());
 
 						// When viewing the home page, we return an HTML document described below.
-						let query = match r.query_parser.parse_query(&request.get_param("query").unwrap().trim()) {
-							Err(e) => return rouille::Response::from_data("application/json", format!( "{{\"error\":[{}]}}", serde_json::to_string(&self.get_query_error(e)).unwrap())),
-							Ok(q) => q
+						let query = match q {
+							Err(e) => return rouille::Response::from_data("application/json", format!( "{{\"error\":[{:?}]}}", serde_json::to_string(&self.get_query_error(&e)))),
+							Ok(q) => q,
 						};
-						drop(r);
 
 						//in theory we could cache the searcher for subsequent queries with a higher startat.. but too complex for now
 						let start_pos = request.get_param("start").unwrap_or("0".to_string()).parse::<usize>().unwrap();
-						let mut top_collector = TopDocs::with_limit(request.get_param("limit").unwrap_or("20".to_string()).parse::<usize>().unwrap() + start_pos);
-						let mut count_collector = Count;
+						let top_collector = TopDocs::with_limit(request.get_param("limit").unwrap_or("20".to_string()).parse::<usize>().unwrap() + start_pos);
+						let count_collector = Count;
 
-						let docs = searcher.search(&*query, &(top_collector, count_collector)).unwrap();
+						let docs = searcher.search(query, &(top_collector, count_collector)).unwrap();
 
 						let num_docs = docs.0.len();
 						let mut i = 0;
@@ -95,10 +93,8 @@ Approach for web:
 					},
 				    (GET) (/api/book/{id: i64}) => {
 				        //FIXME so many unwraps, damn
-				        let r = &self.reader.lock().unwrap();
-				        let searcher = r.reader.searcher();
+				        let searcher = &self.reader.reader.searcher();
 				        let schema = searcher.schema();
-				        drop(r);
 
 				        let id_field = schema.get_field("id").unwrap();
 						let id_term = Term::from_field_i64(id_field, id);
@@ -126,10 +122,8 @@ Approach for web:
 				    },
 					(GET) (/img/{id: i64}) => {
 						//FIXME so many unwraps, damn
-						let r = &self.reader.lock().unwrap();
-						let searcher = r.reader.searcher();
+						let searcher = &self.reader.reader.searcher();
 						let schema = searcher.schema();
-						drop(r);
 						let id_field = schema.get_field("id").unwrap();
 						let id_term = Term::from_field_i64(id_field, id);
 
@@ -145,10 +139,10 @@ Approach for web:
 									Some(mime) => mime.text().unwrap().to_owned(),
 									None =>  return rouille::Response::empty_404()
 								};
-								if(mime.is_empty()) {
+								if mime.is_empty() {
 									return rouille::Response::empty_404();
 								}
-								
+
 								let mut imgfile = File::open(format!("{}/{}",self.coverdir.clone().unwrap(),id)).unwrap();
 								let mut imgbytes = Vec::new();
 								match imgfile.read_to_end(&mut imgbytes) {
@@ -227,7 +221,7 @@ Approach for web:
 		Some(tags)
 	}
 
-	fn get_query_error(&self, query_err: QueryParserError) -> ClientError {
+	fn get_query_error(&self, query_err: &QueryParserError) -> ClientError {
 		match query_err {
 			SyntaxError => ClientError {
 				name: "Syntax Error".to_string(),
