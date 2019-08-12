@@ -183,7 +183,6 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 
 pub struct TantivyReader {
 	pub reader: IndexReader,
-	pub index: Index,
 	pub query_parser: QueryParser,
 }
 
@@ -200,7 +199,6 @@ impl TantivyReader {
 				.reader_builder()
 				.reload_policy(ReloadPolicy::OnCommit)
 				.try_into()?,
-			index: index,
 			query_parser: query_parser
 		})
 	}
