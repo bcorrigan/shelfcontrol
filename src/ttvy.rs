@@ -192,7 +192,7 @@ impl TantivyReader {
 		let mmap_dir = MmapDirectory::open(path)?;
 		let index = Index::open(mmap_dir)?;
 
-		let mut query_parser = QueryParser::for_index(&index, vec![index.schema().get_field("title").unwrap(), index.schema().get_field("description").unwrap()]);
+		let mut query_parser = QueryParser::for_index(&index, vec![index.schema().get_field("creator").unwrap(),index.schema().get_field("title").unwrap(), index.schema().get_field("description").unwrap()]);
 		query_parser.set_conjunction_by_default();
 		Ok(TantivyReader {
 			reader: index
