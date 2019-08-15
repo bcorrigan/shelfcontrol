@@ -1,7 +1,7 @@
 use std::error::Error;
 
 use std::collections::HashMap;
-use std::collections::HashSet;
+
 use std::fs;
 use std::io;
 use std::path::Path;
@@ -14,9 +14,9 @@ use tantivy::{Index, IndexReader, ReloadPolicy};
 use tantivy::IndexWriter;
 
 use ammonia::{Builder, UrlRelative};
-use maplit;
 
-use core::borrow::{Borrow, BorrowMut};
+
+
 use BookMetadata;
 use BookWriter;
 use tantivy::query::QueryParser;
@@ -121,12 +121,12 @@ impl<'a> TantivyWriter<'a> {
 }
 
 impl<'a> BookWriter for TantivyWriter<'a> {
-	fn write_tags(&self, tags: HashMap<String, Vec<i64>>, limit: usize) -> Result<(), Box<Error>> {
+	fn write_tags(&self, _tags: HashMap<String, Vec<i64>>, _limit: usize) -> Result<(), Box<dyn Error>> {
 		//not sure if facets can be added later in tantivy??
 		Ok(())
 	}
 
-	fn write_epubs(&mut self, bms: Vec<BookMetadata>, tags: &mut HashMap<String, Vec<i64>>) -> Result<(), Box<Error>> {
+	fn write_epubs(&mut self, bms: Vec<BookMetadata>, tags: &mut HashMap<String, Vec<i64>>) -> Result<(), Box<dyn Error>> {
 		for bm in bms {
 			bm.add_tags(tags);
 
@@ -165,7 +165,7 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 		Ok(())
 	}
 
-	fn commit(&mut self) -> Result<(), Box<Error>> {
+	fn commit(&mut self) -> Result<(), Box<dyn Error>> {
 		match self.index_writer.commit() {
 			Ok(_) => Ok(()),
 			Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),

@@ -201,7 +201,7 @@ Approach for web:
 		doc.get_first(schema.get_field(field).unwrap()).unwrap().i64_value()
 	}
 
-	fn get_tags(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> Option<Vec<String>> {
+	fn get_tags(&self, _field: &str, doc: &tantivy::Document, schema: &Schema) -> Option<Vec<String>> {
 		let vals: Vec<&tantivy::schema::Value> = doc.get_all(schema.get_field("tags").unwrap());
 		if vals.len() == 0 {
 			return None;

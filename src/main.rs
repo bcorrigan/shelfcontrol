@@ -120,12 +120,12 @@ impl Hash for BookMetadata {
 }
 
 trait BookWriter {
-	fn write_tags(&self, tags: HashMap<String, Vec<i64>>, limit: usize) -> Result<(), Box<Error>>;
-	fn write_epubs(&mut self, bms: Vec<BookMetadata>, tags: &mut HashMap<String, Vec<i64>>) -> Result<(), Box<Error>>;
-	fn commit(&mut self) -> Result<(), Box<Error>>;
+	fn write_tags(&self, tags: HashMap<String, Vec<i64>>, limit: usize) -> Result<(), Box<dyn Error>>;
+	fn write_epubs(&mut self, bms: Vec<BookMetadata>, tags: &mut HashMap<String, Vec<i64>>) -> Result<(), Box<dyn Error>>;
+	fn commit(&mut self) -> Result<(), Box<dyn Error>>;
 }
 
-fn main() -> Result<(), Box<std::error::Error>> {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let matches = App::new("Epub Indexer")
         .version("0.0.1")
         .author("Barry Corrigan <b.j.corrigan@gmail.com>")
@@ -188,7 +188,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 		}
 	}
 
-	let mut writer: Box<BookWriter> = match matches.value_of("db").unwrap_or("tantivy") {
+	let mut writer: Box<dyn BookWriter> = match matches.value_of("db").unwrap_or("tantivy") {
 		//"sqlite" => Box::new(sqlite::SqliteWriter::new( value_t!(matches, "dbfile", String).unwrap_or("repubin.sqlite".to_string()) )? ),
 		"tantivy" => Box::new(
 			match ttvy::TantivyWriter::new(value_t!(matches, "dbfile", String).unwrap_or(".shelfcontrol".to_string())) {
@@ -283,7 +283,7 @@ fn main() -> Result<(), Box<std::error::Error>> {
 	writer.write_tags(tags, 10)
 }
 
-fn parse_epub(book_loc: &String, use_coverdir:bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<Error>> {
+fn parse_epub(book_loc: &String, use_coverdir:bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<dyn Error>> {
 	let mut doc = EpubDoc::new(&book_loc)?;
 	//	println!("Got doc! {}", &book_loc);
 	let metadata = fs::metadata(&book_loc)?;
