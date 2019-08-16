@@ -77,12 +77,12 @@ Approach for web:
 						let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start_pos, &request.get_param("query").unwrap().replace("\"","\\\"")).to_owned();
 						for (i,doc) in docs.0.iter().enumerate() {
 							//i+=1;
-							if i>start_pos {
+							if (i+1)>start_pos {
 								let retrieved = searcher.doc(doc.1).unwrap();
 
 								json_str.push_str(&serde_json::to_string(&self.to_bm(&retrieved, &searcher.schema())).unwrap());
 
-								if i!=num_docs {
+								if (i+1)!=num_docs {
 									json_str.push_str(",");
 								}
 							}
