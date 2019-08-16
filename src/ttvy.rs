@@ -22,8 +22,6 @@ use BookWriter;
 use tantivy::query::QueryParser;
 
 pub struct TantivyWriter<'a> {
-	dir: String,
-	index: Index,
 	index_writer: IndexWriter,
 	id: Field,
 	title: Field,
@@ -100,21 +98,19 @@ impl<'a> TantivyWriter<'a> {
 		}
 
 		Ok(TantivyWriter {
-			dir: dir,
-			index: index,
 			index_writer: writer,
-			id: id,
-			title: title,
-			description: description,
-			publisher: publisher,
-			creator: creator,
-			file: file,
-			filesize: filesize,
-			modtime: modtime,
-			pubdate: pubdate,
-			moddate: moddate,
-			cover_mime: cover_mime,
-			tags: tags,
+			id,
+			title,
+			description,
+			publisher,
+			creator,
+			file,
+			filesize,
+			modtime,
+			pubdate,
+			moddate,
+			cover_mime,
+			tags,
 			sanitiser: b,
 		})
 	}
@@ -132,19 +128,19 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 
 			let mut ttdoc = Document::default();
 			ttdoc.add_i64(self.id, bm.id);
-			ttdoc.add_text(self.title, &bm.title.unwrap_or("".to_string()));
+			ttdoc.add_text(self.title, &bm.title.unwrap_or_else(|| "".to_string()));
 			ttdoc.add_text(
 				self.description,
-				self.sanitiser.clean(&bm.description.unwrap_or("".to_string())).to_string().as_str(),
+				self.sanitiser.clean(&bm.description.unwrap_or_else(|| "".to_string())).to_string().as_str(),
 			);
-			ttdoc.add_text(self.publisher, &bm.publisher.unwrap_or("".to_string()));
-			ttdoc.add_text(self.creator, &bm.creator.unwrap_or("".to_string()));
+			ttdoc.add_text(self.publisher, &bm.publisher.unwrap_or_else(|| "".to_string()));
+			ttdoc.add_text(self.creator, &bm.creator.unwrap_or_else(|| "".to_string()));
 			ttdoc.add_text(self.file, &bm.file);
 			ttdoc.add_i64(self.filesize, bm.filesize);
 			ttdoc.add_i64(self.modtime, bm.modtime);
-			ttdoc.add_text(self.pubdate, &bm.pubdate.unwrap_or("".to_string()));
-			ttdoc.add_text(self.moddate, &bm.moddate.unwrap_or("".to_string()));
-			ttdoc.add_text(self.cover_mime, &bm.cover_mime.unwrap_or("".to_string()));
+			ttdoc.add_text(self.pubdate, &bm.pubdate.unwrap_or_else(|| "".to_string()));
+			ttdoc.add_text(self.moddate, &bm.moddate.unwrap_or_else(|| "".to_string()));
+			ttdoc.add_text(self.cover_mime, &bm.cover_mime.unwrap_or_else(|| "".to_string()));
 
 			if bm.subject.is_some() {
 				for subject in &bm.subject.unwrap() {
@@ -157,7 +153,7 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 				}
 			}
 
-			&self.index_writer.add_document(ttdoc);
+			self.index_writer.add_document(ttdoc);
 
 			//tags can probably be "facets" in tantivy, see: https://github.com/tantivy-search/tantivy/issues/215
 			//this appears ot be only way to support multiple of them
@@ -199,7 +195,7 @@ impl TantivyReader {
 				.reader_builder()
 				.reload_policy(ReloadPolicy::OnCommit)
 				.try_into()?,
-			query_parser: query_parser
+			query_parser
 		})
 	}
 }

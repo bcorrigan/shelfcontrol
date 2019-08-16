@@ -65,18 +65,18 @@ Approach for web:
 						};
 
 						//in theory we could cache the searcher for subsequent queries with a higher startat.. but too complex for now
-						let start_pos = request.get_param("start").unwrap_or("0".to_string()).parse::<usize>().unwrap();
-						let top_collector = TopDocs::with_limit(request.get_param("limit").unwrap_or("20".to_string()).parse::<usize>().unwrap() + start_pos);
+						let start_pos = request.get_param("start").unwrap_or_else(|| "0".to_string()).parse::<usize>().unwrap();
+						let top_collector = TopDocs::with_limit(request.get_param("limit").unwrap_or_else(|| "20".to_string()).parse::<usize>().unwrap() + start_pos);
 						let count_collector = Count;
 
 						let docs = searcher.search(query, &(top_collector, count_collector)).unwrap();
 
 						let num_docs = docs.0.len();
-						let mut i = 0;
+						//let mut i = 0;
 						//json encode query value
 						let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start_pos, &request.get_param("query").unwrap().replace("\"","\\\"")).to_owned();
-						for doc in docs.0 {
-							i+=1;
+						for (i,doc) in docs.0.iter().enumerate() {
+							//i+=1;
 							if i>start_pos {
 								let retrieved = searcher.doc(doc.1).unwrap();
 
@@ -192,8 +192,8 @@ Approach for web:
 	fn get_doc_str(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> Option<String> {
 		doc.get_first(schema.get_field(field).unwrap())
 			.map(|val| match val.text() {
-				Some(t) => return t.to_string(),
-				_ => return "".to_string()
+				Some(t) => t.to_string(),
+				_ => "".to_string()
 			})
 	}
 
@@ -203,7 +203,7 @@ Approach for web:
 
 	fn get_tags(&self, _field: &str, doc: &tantivy::Document, schema: &Schema) -> Option<Vec<String>> {
 		let vals: Vec<&tantivy::schema::Value> = doc.get_all(schema.get_field("tags").unwrap());
-		if vals.len() == 0 {
+		if vals.is_empty() {
 			return None;
 		}
 		let mut tags = Vec::new();

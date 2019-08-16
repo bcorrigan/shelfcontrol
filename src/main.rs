@@ -91,10 +91,10 @@ impl BookMetadata {
 		if self.subject.is_some() {
 			for tag in self.subject.clone().unwrap() {
 				if tags.contains_key(&tag) {
-					tags.get_mut(&tag).unwrap().push(self.id.clone());
+					tags.get_mut(&tag).unwrap().push(self.id);
 				} else {
 					let mut val = Vec::new();
-					val.push(self.id.clone());
+					val.push(self.id);
 					tags.insert(tag.clone(), val);
 				}
 			}
@@ -164,13 +164,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.get_matches();
 
 	if matches.is_present("search") {
-		match ttvy::TantivyReader::new(value_t!(matches, "dbfile", String).unwrap_or(".shelfcontrol".to_string())) {
+		match ttvy::TantivyReader::new(value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string())) {
 			Ok(reader) => { let server = Server {
-				reader: reader,
+				reader,
 				host: "localhost".to_string(),
 				port: 8000,
 				use_coverdir: true,
-				coverdir: Some(value_t!(matches, "coverdir", String).unwrap_or(".shelfcontrol/covers".to_string()))
+				coverdir: Some(value_t!(matches, "coverdir", String).unwrap_or_else(|_| ".shelfcontrol/covers".to_string()))
 			};
 			server.serve()
 		},
@@ -181,17 +181,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let use_coverdir = matches.is_present("coverdir");
 	let coverdir = matches.value_of("coverdir");
 
-	if use_coverdir {
-		if !Path::new(coverdir.unwrap()).exists() {
-			println!("Covers directory {} does not exist.", coverdir.unwrap());
-			process::exit(4);
-		}
+	if use_coverdir && !Path::new(coverdir.unwrap()).exists() {
+		println!("Covers directory {} does not exist.", coverdir.unwrap());
+		process::exit(4);
 	}
 
 	let mut writer: Box<dyn BookWriter> = match matches.value_of("db").unwrap_or("tantivy") {
 		//"sqlite" => Box::new(sqlite::SqliteWriter::new( value_t!(matches, "dbfile", String).unwrap_or("repubin.sqlite".to_string()) )? ),
 		"tantivy" => Box::new(
-			match ttvy::TantivyWriter::new(value_t!(matches, "dbfile", String).unwrap_or(".shelfcontrol".to_string())) {
+			match ttvy::TantivyWriter::new(value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string())) {
 				Ok(writer) => Ok(writer),
 				Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),
 			}?,
@@ -199,7 +197,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		_ => process::exit(2),
 	};
 
-	let dirs = values_t!(matches.values_of("directory"), String).unwrap_or(vec![".".to_string()]);
+	let dirs = values_t!(matches.values_of("directory"), String).unwrap_or_else(|_| vec![".".to_string()]);
 
 	for directory in &dirs {
 		if !Path::new(&directory).exists() {
@@ -243,7 +241,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 					if l.path().display().to_string().ends_with(".epub") && l.file_type().is_file() {
 						match parse_epub(&l.path().display().to_string(), use_coverdir, coverdir) {
 							Ok(bm) => {
-								if seen_bookids.insert(bm.id.clone()) {
+								if seen_bookids.insert(bm.id) {
 									books.push(bm);
 									wrote += 1;
 								} else {
@@ -283,14 +281,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	writer.write_tags(tags, 10)
 }
 
-fn parse_epub(book_loc: &String, use_coverdir:bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<dyn Error>> {
+fn parse_epub(book_loc: &str, use_coverdir:bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<dyn Error>> {
 	let mut doc = EpubDoc::new(&book_loc)?;
 	//	println!("Got doc! {}", &book_loc);
 	let metadata = fs::metadata(&book_loc)?;
 	let modtime = match metadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH) {
 		Ok(t) => t.as_secs() as i64,
 		Err(_) => match std::time::UNIX_EPOCH.duration_since(metadata.modified().unwrap()) {
-			Ok(t) => (t.as_secs() as i64) * (-1),
+			Ok(t) => -(t.as_secs() as i64),
 			Err(_) => panic!("Impossible time for {}", &book_loc),
 		},
 	};
@@ -311,14 +309,14 @@ fn parse_epub(book_loc: &String, use_coverdir:bool, coverdir: Option<&str>) -> R
 		title: get_first_fd("title", &doc.metadata),
 		description: get_first_fd("description", &doc.metadata),
 		publisher: get_first_fd("publisher", &doc.metadata),
-		creator: get_first_fd("creator", &doc.metadata).map(|s| unmangle_creator(s)),
+		creator: get_first_fd("creator", &doc.metadata).map(unmangle_creator),
 		subject: doc.metadata.get("subject").cloned(),
 		file: Path::new(&book_loc).canonicalize().unwrap().display().to_string(),
 		filesize: metadata.len() as i64,
-		modtime: modtime,
+		modtime,
 		pubdate: get_first_fd("date", &doc.metadata),
 		moddate: get_first_fd("date", &doc.metadata),
-		cover_mime: cover_mime
+		cover_mime
 	};
 
 	bm.id = hash_md(&bm) as i64;
@@ -350,11 +348,11 @@ fn get_first_fd(mdfield: &str, md: &HashMap<String, Vec<String>>) -> Option<Stri
 //Attempt to unmangle author names to be consistent
 fn unmangle_creator(creator: String) -> String {
 	let unspaced_creator = creator.split_whitespace().join(" ");
-	if unspaced_creator.matches(",").count() == 1 {
-		let parts:Vec<&str> = unspaced_creator.split(",").collect();
+	if unspaced_creator.matches(',').count() == 1 {
+		let parts:Vec<&str> = unspaced_creator.split(',').collect();
 		return format!("{} {}",parts[1].trim(), parts[0].trim());
 	}
-	return unspaced_creator;
+	unspaced_creator
 }
 
 #[test]
@@ -377,8 +375,8 @@ fn hash_md(bm: &BookMetadata) -> u64 {
 fn report_progress(processed: u64, total_books: u64, wrote: u64, batch_start: SystemTime, scan_start: SystemTime) {
 	match SystemTime::now().duration_since(batch_start) {
 		Ok(n) => {
-			let millis = n.as_secs() * 1000 + n.subsec_millis() as u64;
-			let bps = (1000f64 / millis as f64) * 1000 as f64;
+			let millis = n.as_secs() * 1000 + u64::from(n.subsec_millis());
+			let bps = (1000f64 / millis as f64) * 1000_f64;
 
 			let total_secs = SystemTime::now().duration_since(scan_start).unwrap().as_secs();
 			let total_bps = processed as f64 / total_secs as f64;
