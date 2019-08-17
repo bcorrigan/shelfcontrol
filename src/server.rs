@@ -33,40 +33,36 @@ struct ClientError {
 
 
 impl Server {
-/*
-Approach for web:
-
-1) Use include_str! to directly include templates
-2) build.rs from cargo with minimise (as build dep?) can prep file
-3) everything here is json endpoint with one top level "get the single page Vue.js" endpoint
-4) swc might be a good minifier
-5) see https://refactoringui.com/previews/building-your-color-palette/ for palette advice
-*/
 	#[allow(unreachable_code)]
 	pub fn serve(self) -> Result<(), tantivy::TantivyError> {
 		println!("Starting server on localhost:8000");
-
-		//don't think needed anymore?
-		//reader.index.load_searchers()?;
-
-		//let t_reader:Mutex<&'a TantivyReader> = Mutex::new(&self.reader);
 
 		rouille::start_server("localhost:8000", move |request| {
 			rouille::log(&request, io::stdout(), || {
 				router!(request,
 					(GET) (/api/search) => {
 						let searcher = &self.reader.reader.searcher();
-						let q = &self.reader.query_parser.parse_query(&request.get_param("query").unwrap().trim());
+						let q = &self.reader.query_parser.parse_query(match &request.get_param("query") {
+							Some(query) => query,
+							None => return self.get_str_error_response("Query error", "\"query\" should be provided when performing a query")
+						}.trim());
 
-						// When viewing the home page, we return an HTML document described below.
 						let query = match q {
-							Err(e) => return rouille::Response::from_data("application/json", format!( "{{\"error\":[{:?}]}}", serde_json::to_string(&self.get_query_error(&e)))),
+							Err(e) => return self.get_error_response(&self.get_query_error(&e)),
 							Ok(q) => q,
 						};
 
 						//in theory we could cache the searcher for subsequent queries with a higher startat.. but too complex for now
-						let start_pos = request.get_param("start").unwrap_or_else(|| "0".to_string()).parse::<usize>().unwrap();
-						let top_collector = TopDocs::with_limit(request.get_param("limit").unwrap_or_else(|| "20".to_string()).parse::<usize>().unwrap() + start_pos);
+						let start_pos = match request.get_param("start").unwrap_or_else(|| "0".to_string()).parse::<usize>() {
+							Ok(pos) => pos,
+							Err(_) => return self.get_str_error_response("Type error", "\"start\" should have an integer argument"),
+						};
+
+						let top_collector = TopDocs::with_limit(match request.get_param("limit").unwrap_or_else(|| "20".to_string()).parse::<usize>() {
+							Ok(lim) => lim,
+							Err(_) => return self.get_str_error_response("Type error", "\"limit\" should have an integer argument"),
+						} + start_pos);
+
 						let count_collector = Count;
 
 						let docs = searcher.search(query, &(top_collector, count_collector)).unwrap();
@@ -264,5 +260,16 @@ Approach for web:
 				msg: "Date must have correct format".to_string(),
 			},
 		}
+	}
+
+	fn get_error_response(&self, client_error: &ClientError) -> rouille::Response {
+		rouille::Response::from_data("application/json", format!( "{{\"error\":[{:?}]}}", serde_json::to_string(client_error)))
+	}
+
+	fn get_str_error_response(&self, name:&str, msg:&str) -> rouille::Response {
+		rouille::Response::from_data("application/json", format!( "{{\"error\":[{:?}]}}", serde_json::to_string( &ClientError {
+			name: name.to_string(),
+			msg: msg.to_string(),
+		})))
 	}
 }
