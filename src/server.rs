@@ -42,12 +42,14 @@ impl Server {
 				router!(request,
 					(GET) (/api/search) => {
 						let searcher = &self.reader.reader.searcher();
-						let q = &self.reader.query_parser.parse_query(match &request.get_param("query") {
+						let q = &request.get_param("query");
+						let query_str = match q {
 							Some(query) => query,
 							None => return self.get_str_error_response("Query error", "\"query\" should be provided when performing a query")
-						}.trim());
+						}.trim();
 
-						let query = match q {
+						let query_parsed = &self.reader.query_parser.parse_query(query_str);
+						let query = match query_parsed {
 							Err(e) => return self.get_error_response(&self.get_query_error(&e)),
 							Ok(q) => q,
 						};
@@ -65,14 +67,16 @@ impl Server {
 
 						let count_collector = Count;
 
-						let docs = searcher.search(query, &(top_collector, count_collector)).unwrap();
+						let docs = match searcher.search(query, &(top_collector, count_collector)) {
+							Ok(docs) => docs,
+							Err(e) => {println!("Error searching:{}", e); return self.get_str_error_response("Index error", "Something is wrong with the index")},
+						};
+
 
 						let num_docs = docs.0.len();
-						//let mut i = 0;
 						//json encode query value
-						let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start_pos, &request.get_param("query").unwrap().replace("\"","\\\"")).to_owned();
+						let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start_pos, query_str.replace("\"","\\\"")).to_owned();
 						for (i,doc) in docs.0.iter().enumerate() {
-							//i+=1;
 							if (i+1)>start_pos {
 								let retrieved = searcher.doc(doc.1).unwrap();
 
