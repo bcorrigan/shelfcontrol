@@ -31,7 +31,6 @@ struct ClientError {
 	msg: String,
 }
 
-
 impl Server {
 	#[allow(unreachable_code)]
 	pub fn serve(self) -> Result<(), tantivy::TantivyError> {
@@ -78,9 +77,15 @@ impl Server {
 						let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start_pos, query_str.replace("\"","\\\"")).to_owned();
 						for (i,doc) in docs.0.iter().enumerate() {
 							if (i+1)>start_pos {
-								let retrieved = searcher.doc(doc.1).unwrap();
+								let retrieved = match searcher.doc(doc.1) {
+									Ok(doc) => doc,
+									Err(_) => continue,
+								};
 
-								json_str.push_str(&serde_json::to_string(&self.to_bm(&retrieved, &searcher.schema())).unwrap());
+								json_str.push_str(match &serde_json::to_string(&self.to_bm(&retrieved, &searcher.schema())) {
+									Ok(str) => str,
+									Err(_) => continue,
+								});
 
 								if (i+1)!=num_docs {
 									json_str.push_str(",");
@@ -91,12 +96,12 @@ impl Server {
 
 						rouille::Response::from_data("application/json", json_str).with_additional_header("Access-Control-Allow-Origin", "*")
 					},
-				    (GET) (/api/book/{id: i64}) => {
-				        //FIXME so many unwraps, damn
-				        let searcher = &self.reader.reader.searcher();
-				        let schema = searcher.schema();
+					(GET) (/api/book/{id: i64}) => {
+						//FIXME so many unwraps, damn
+						let searcher = &self.reader.reader.searcher();
+						let schema = searcher.schema();
 
-				        let id_field = schema.get_field("id").unwrap();
+						let id_field = schema.get_field("id").unwrap();
 						let id_term = Term::from_field_i64(id_field, id);
 
 						let term_query = TermQuery::new(id_term, IndexRecordOption::Basic);
@@ -104,22 +109,22 @@ impl Server {
 						//could this be better with TopFieldCollector which uses a FAST field?
 						let docs = searcher.search(&term_query, &TopDocs::with_limit(1)).unwrap();
 
-				        if docs.len()==1 {
-				            let retrieved = searcher.doc(docs.first().unwrap().1.to_owned()).unwrap();
-	                        let file_loc = retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap();
-	                        let creator = retrieved.get_first(schema.get_field("creator").unwrap()).unwrap().text().unwrap();
-	                        let title = retrieved.get_first(schema.get_field("title").unwrap()).unwrap().text().unwrap();
-	                        let mut f = File::open(file_loc).unwrap();
-	                        let mut buffer = Vec::new();
-	                        // read the whole file
-	                        f.read_to_end(&mut buffer).unwrap();
-	                        return rouille::Response::from_data("application/epub+zip", buffer).with_additional_header("Access-Control-Allow-Origin", "*")
-	                                                                                           .with_content_disposition_attachment(&format!("{} - {}", creator, title));
-				        } else {
+						if docs.len()==1 {
+							let retrieved = searcher.doc(docs.first().unwrap().1.to_owned()).unwrap();
+							let file_loc = retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap();
+							let creator = retrieved.get_first(schema.get_field("creator").unwrap()).unwrap().text().unwrap();
+							let title = retrieved.get_first(schema.get_field("title").unwrap()).unwrap().text().unwrap();
+							let mut f = File::open(file_loc).unwrap();
+							let mut buffer = Vec::new();
+							// read the whole file
+							f.read_to_end(&mut buffer).unwrap();
+							return rouille::Response::from_data("application/epub+zip", buffer).with_additional_header("Access-Control-Allow-Origin", "*")
+																							   .with_content_disposition_attachment(&format!("{} - {}", creator, title));
+						} else {
 							println!("404 1, found {:?}", docs.len());
 							return rouille::Response::empty_404()
 						}
-				    },
+					},
 					(GET) (/img/{id: i64}) => {
 						//FIXME so many unwraps, damn
 						let searcher = &self.reader.reader.searcher();
@@ -156,7 +161,7 @@ impl Server {
 								let mut doc = EpubDoc::new(retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap()).unwrap();
 								match doc.get_cover() {
 									Ok(cover) => { let mime = doc.get_resource_mime(&doc.get_cover_id().unwrap()).unwrap();
-											 	return rouille::Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*"); },
+												 return rouille::Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*"); },
 												Err(_) => return rouille::Response::empty_404(),
 								}
 							}
@@ -190,11 +195,10 @@ impl Server {
 
 	//I *know* the fields are present in schema, and I *know* that certain fields eg id are always populated, so just unwrap() here
 	fn get_doc_str(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> Option<String> {
-		doc.get_first(schema.get_field(field).unwrap())
-			.map(|val| match val.text() {
-				Some(t) => t.to_string(),
-				_ => "".to_string()
-			})
+		doc.get_first(schema.get_field(field).unwrap()).map(|val| match val.text() {
+			Some(t) => t.to_string(),
+			_ => "".to_string(),
+		})
 	}
 
 	fn get_doc_i64(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> i64 {
@@ -267,13 +271,22 @@ impl Server {
 	}
 
 	fn get_error_response(&self, client_error: &ClientError) -> rouille::Response {
-		rouille::Response::from_data("application/json", format!( "{{\"error\":[{:?}]}}", serde_json::to_string(client_error)))
+		rouille::Response::from_data(
+			"application/json",
+			format!("{{\"error\":[{:?}]}}", serde_json::to_string(client_error)),
+		)
 	}
 
-	fn get_str_error_response(&self, name:&str, msg:&str) -> rouille::Response {
-		rouille::Response::from_data("application/json", format!( "{{\"error\":[{:?}]}}", serde_json::to_string( &ClientError {
-			name: name.to_string(),
-			msg: msg.to_string(),
-		})))
+	fn get_str_error_response(&self, name: &str, msg: &str) -> rouille::Response {
+		rouille::Response::from_data(
+			"application/json",
+			format!(
+				"{{\"error\":[{:?}]}}",
+				serde_json::to_string(&ClientError {
+					name: name.to_string(),
+					msg: msg.to_string(),
+				})
+			),
+		)
 	}
 }
