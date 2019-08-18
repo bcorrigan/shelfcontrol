@@ -165,13 +165,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	if matches.is_present("search") {
 		match ttvy::TantivyReader::new(value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string())) {
-			Ok(reader) => { let server = Server {
+			Ok(reader) => { let server = Server::new(
 				reader,
-				host: "localhost".to_string(),
-				port: 8000,
-				use_coverdir: true,
-				coverdir: Some(value_t!(matches, "coverdir", String).unwrap_or_else(|_| ".shelfcontrol/covers".to_string()))
-			};
+				"localhost",
+				8000,
+				true,
+				Some(value_t!(matches, "coverdir", String).unwrap_or_else(|_| ".shelfcontrol/covers".to_string())))?;
 			server.serve()
 		},
 			Err(_) => panic!("Could not read given index."),

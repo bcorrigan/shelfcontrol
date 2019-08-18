@@ -4,6 +4,7 @@ use tantivy::query::QueryParserError::*;
 use tantivy::query::TermQuery;
 use tantivy::schema::IndexRecordOption;
 use tantivy::schema::Value::Facet;
+use tantivy::schema::Field;
 use ttvy::TantivyReader;
 use BookMetadata;
 //use tantivy::schema::Facet;
@@ -13,7 +14,7 @@ use tantivy::schema::Term;
 use epub::doc::EpubDoc;
 
 use std::io;
-
+use std::fmt;
 use std::fs::File;
 use std::io::prelude::*;
 
@@ -23,6 +24,12 @@ pub struct Server {
 	pub port: u32,
 	pub use_coverdir: bool,
 	pub coverdir: Option<String>,
+	id_field: Field,
+	file_field: Field,
+	creator_field: Field,
+	mime_field: Field,
+	tags_field: Field,
+	title_field: Field,
 }
 
 #[derive(Debug, Serialize)]
@@ -31,7 +38,45 @@ struct ClientError {
 	msg: String,
 }
 
+#[derive(Debug)]
+pub struct ServerError {
+	msg: String,
+}
+
+impl std::error::Error for ServerError{}
+
+impl fmt::Display for ServerError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
 impl Server {
+	pub fn new(reader:TantivyReader,host:&str,port:u32, use_coverdir:bool, coverdir:Option<String>) -> Result<Server, ServerError> {
+		let searcher = reader.reader.searcher();
+		let schema = searcher.schema();
+		Ok(Server {
+			reader,
+			host:host.to_string(),
+			port,
+			use_coverdir,
+			coverdir,
+			id_field:Server::get_field(schema, "id")?,
+			file_field:Server::get_field(schema, "file")?,
+			creator_field:Server::get_field(schema, "creator")?,
+			mime_field:Server::get_field(schema, "cover_mime")?,
+			tags_field:Server::get_field(schema, "tags")?,
+			title_field:Server::get_field(schema, "title")?,
+		})
+	}
+
+	pub fn get_field(schema:&Schema, field_name:&str) -> Result<Field, ServerError> {
+		match schema.get_field(field_name) {
+			Some(f) => Ok(f),
+			None => Err(ServerError { msg: format!("Mismatching schema - specified field {} does not exist in tantivy schema for this index.", field_name).to_string() }),
+		}
+	}
+
 	#[allow(unreachable_code)]
 	pub fn serve(self) -> Result<(), tantivy::TantivyError> {
 		println!("Starting server on localhost:8000");
@@ -99,9 +144,8 @@ impl Server {
 					(GET) (/api/book/{id: i64}) => {
 						//FIXME so many unwraps, damn
 						let searcher = &self.reader.reader.searcher();
-						let schema = searcher.schema();
 
-						let id_field = schema.get_field("id").unwrap();
+						let id_field = self.id_field;
 						let id_term = Term::from_field_i64(id_field, id);
 
 						let term_query = TermQuery::new(id_term, IndexRecordOption::Basic);
@@ -111,9 +155,9 @@ impl Server {
 
 						if docs.len()==1 {
 							let retrieved = searcher.doc(docs.first().unwrap().1.to_owned()).unwrap();
-							let file_loc = retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap();
-							let creator = retrieved.get_first(schema.get_field("creator").unwrap()).unwrap().text().unwrap();
-							let title = retrieved.get_first(schema.get_field("title").unwrap()).unwrap().text().unwrap();
+							let file_loc = retrieved.get_first(self.file_field).unwrap().text().unwrap();
+							let creator = retrieved.get_first(self.creator_field).unwrap().text().unwrap();
+							let title = retrieved.get_first(self.title_field).unwrap().text().unwrap();
 							let mut f = File::open(file_loc).unwrap();
 							let mut buffer = Vec::new();
 							// read the whole file
@@ -128,9 +172,7 @@ impl Server {
 					(GET) (/img/{id: i64}) => {
 						//FIXME so many unwraps, damn
 						let searcher = &self.reader.reader.searcher();
-						let schema = searcher.schema();
-						let id_field = schema.get_field("id").unwrap();
-						let id_term = Term::from_field_i64(id_field, id);
+						let id_term = Term::from_field_i64(self.id_field, id);
 
 						let term_query = TermQuery::new(id_term, IndexRecordOption::Basic);
 
@@ -140,7 +182,7 @@ impl Server {
 						if docs.len()==1 {
 							let retrieved = searcher.doc(docs.first().unwrap().1.to_owned()).unwrap();
 							if self.use_coverdir {
-								let mime = match retrieved.get_first(schema.get_field("cover_mime").unwrap()) {
+								let mime = match retrieved.get_first(self.mime_field) {
 									Some(mime) => mime.text().unwrap().to_owned(),
 									None =>  return rouille::Response::empty_404()
 								};
@@ -158,7 +200,7 @@ impl Server {
 								}
 							} else {
 								//ok doing it inline like this for a very low use server
-								let mut doc = EpubDoc::new(retrieved.get_first(schema.get_field("file").unwrap()).unwrap().text().unwrap()).unwrap();
+								let mut doc = EpubDoc::new(retrieved.get_first(self.file_field).unwrap().text().unwrap()).unwrap();
 								match doc.get_cover() {
 									Ok(cover) => { let mime = doc.get_resource_mime(&doc.get_cover_id().unwrap()).unwrap();
 												 return rouille::Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*"); },
@@ -183,7 +225,7 @@ impl Server {
 			description: self.get_doc_str("description", &doc, &schema),
 			publisher: self.get_doc_str("publisher", &doc, &schema),
 			creator: self.get_doc_str("creator", &doc, &schema),
-			subject: self.get_tags("tags", &doc, &schema),
+			subject: self.get_tags("tags", &doc),
 			file: self.get_doc_str("file", &doc, &schema).unwrap(),
 			filesize: self.get_doc_i64("filesize", &doc, &schema),
 			modtime: self.get_doc_i64("modtime", &doc, &schema),
@@ -205,8 +247,8 @@ impl Server {
 		doc.get_first(schema.get_field(field).unwrap()).unwrap().i64_value()
 	}
 
-	fn get_tags(&self, _field: &str, doc: &tantivy::Document, schema: &Schema) -> Option<Vec<String>> {
-		let vals: Vec<&tantivy::schema::Value> = doc.get_all(schema.get_field("tags").unwrap());
+	fn get_tags(&self, _field: &str, doc: &tantivy::Document) -> Option<Vec<String>> {
+		let vals: Vec<&tantivy::schema::Value> = doc.get_all(self.tags_field);
 		if vals.is_empty() {
 			return None;
 		}
