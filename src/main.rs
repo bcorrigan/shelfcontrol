@@ -17,6 +17,7 @@ extern crate core;
 extern crate serde;
 extern crate serde_json;
 extern crate itertools;
+extern crate failure;
 
 use std::io::Write;
 use chrono::{DateTime, Local};
@@ -39,6 +40,7 @@ use server::Server;
 
 mod server;
 mod ttvy;
+mod error;
 
 //to embed resources use rust-embed or include_str
 
