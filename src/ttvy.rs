@@ -6,7 +6,6 @@ use std::fs;
 use std::io;
 use std::path::Path;
 use std::process;
-use std::fmt;
 
 use tantivy::directory::MmapDirectory;
 use tantivy::schema::*;
@@ -14,6 +13,7 @@ use tantivy::{Index, IndexReader, ReloadPolicy};
 use tantivy::IndexWriter;
 //use tantivy::schema::Value::Facet;
 use tantivy::collector::{Count, TopDocs};
+use tantivy::query::TermQuery;
 
 use ammonia::{Builder, UrlRelative};
 use BookMetadata;
@@ -181,11 +181,7 @@ pub struct TantivyReader {
 	reader: IndexReader,
 	query_parser: QueryParser,
 	id_field: Field,
-	file_field: Field,
-	creator_field: Field,
-	mime_field: Field,
 	tags_field: Field,
-	title_field: Field,
 }
 
 impl TantivyReader {
@@ -194,18 +190,15 @@ impl TantivyReader {
 		let mmap_dir = MmapDirectory::open(path)?;
 		let index = Index::open(mmap_dir)?;
 		let reader = index.reader_builder().reload_policy(ReloadPolicy::OnCommit).try_into()?;
-		let schema = reader.searcher().schema();
+		let searcher = reader.searcher();
+		let schema = searcher.schema();
 		let mut query_parser = QueryParser::for_index(&index, vec![index.schema().get_field("creator").unwrap(),index.schema().get_field("title").unwrap(), index.schema().get_field("description").unwrap()]);
 		query_parser.set_conjunction_by_default();
 		Ok(TantivyReader {
 			reader,
 			query_parser,
 			id_field:TantivyReader::get_field(schema, "id")?,
-			file_field:TantivyReader::get_field(schema, "file")?,
-			creator_field:TantivyReader::get_field(schema, "creator")?,
-			mime_field:TantivyReader::get_field(schema, "cover_mime")?,
 			tags_field:TantivyReader::get_field(schema, "tags")?,
-			title_field:TantivyReader::get_field(schema, "title")?,
 		})
 	}
 
@@ -227,21 +220,15 @@ impl TantivyReader {
 		};
 
 		let top_collector = TopDocs::with_limit(start + limit);
-
 		let count_collector = Count;
-
-		let docs = match searcher.search(tquery, &(top_collector, count_collector)) {
-			Ok(docs) => docs,
-			Err(e) => {println!("Error searching:{}", e); return Ok(self.get_str_error_response("Index error", "Something is wrong with the index"))},
-		};
-
-
+		let docs = searcher.search(tquery, &(top_collector, count_collector))?;
 		let num_docs = docs.0.len();
+
 		//json encode query value
 		let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start, query.replace("\"","\\\"")).to_owned();
-		for (i,doc) in docs.0.iter().enumerate() {
+		for (i,doc_addr) in docs.0.iter().enumerate() {
 			if (i+1)>start {
-				let retrieved = match searcher.doc(doc.1) {
+				let retrieved = match searcher.doc(doc_addr.1) {
 					Ok(doc) => doc,
 					Err(_) => continue,
 				};
@@ -261,18 +248,30 @@ impl TantivyReader {
 		Ok(json_str)
 	}
 
-	fn get_error_response(&self, client_error: &ClientError) -> String {
-		format!("{{\"error\":[{:?}]}}", serde_json::to_string(client_error))
+	pub fn get_book(&self, id: i64) -> Option<BookMetadata> {
+		let searcher = &self.reader.searcher();
+		let id_term = Term::from_field_i64(self.id_field, id);
+		let term_query = TermQuery::new(id_term, IndexRecordOption::Basic);
+
+		//could this be better with TopFieldCollector which uses a FAST field?
+		let docs = searcher.search(&term_query, &TopDocs::with_limit(1)).unwrap();
+
+		if docs.len()==1 {
+			match docs.first() {
+				Some(doc_addr) => match searcher.doc(doc_addr.1) {
+					Ok(doc) => Some(self.to_bm(&doc, searcher.schema())),
+					Err(e) => {println!("Doc disappeared. id:{}, err: {}", id, e); None},
+				},
+				None => {println!("Doc disappeared. id:{}", id); None},
+			}
+		} else {
+			println!("Found {} matching docs for supposedly unique id {}.", docs.len(), id);
+			None
+		}
 	}
 
-	fn get_str_error_response(&self, name: &str, msg: &str) -> String {
-			format!(
-				"{{\"error\":[{:?}]}}",
-				serde_json::to_string(&ClientError {
-					name: name.to_string(),
-					msg: msg.to_string(),
-				})
-			)
+	fn get_error_response(&self, client_error: &ClientError) -> String {
+		format!("{{\"error\":[{:?}]}}", serde_json::to_string(client_error))
 	}
 
 	fn to_bm(&self, doc: &tantivy::Document, schema: &Schema) -> BookMetadata {

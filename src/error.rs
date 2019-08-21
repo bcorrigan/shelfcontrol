@@ -8,8 +8,8 @@ use tantivy::directory::error::OpenDirectoryError;
 //Rather, error caused by client use eg. search for non-existent field
 #[derive(Debug, Serialize)]
 pub struct ClientError {
-	name: String,
-	msg: String,
+	pub name: String,
+	pub msg: String,
 }
 
 #[derive(Debug, Fail)]
