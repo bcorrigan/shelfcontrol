@@ -7,19 +7,19 @@ use std::io;
 use std::path::Path;
 use std::process;
 
-//extern crate tantivy;
 use tantivy::directory::MmapDirectory;
 use tantivy::schema::*;
 use tantivy::{Index, IndexReader, ReloadPolicy};
 use tantivy::IndexWriter;
+//use tantivy::schema::Value::Facet;
+use tantivy::collector::{Count, TopDocs};
+use tantivy::query::TermQuery;
 
 use ammonia::{Builder, UrlRelative};
-
-
-
 use BookMetadata;
 use BookWriter;
 use tantivy::query::QueryParser;
+use error::{ClientError,StoreError,get_query_error};
 
 pub struct TantivyWriter<'a> {
 	index_writer: IndexWriter,
@@ -178,24 +178,148 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 }
 
 pub struct TantivyReader {
-	pub reader: IndexReader,
-	pub query_parser: QueryParser,
+	reader: IndexReader,
+	query_parser: QueryParser,
+	id_field: Field,
+	tags_field: Field,
 }
 
 impl TantivyReader {
-	pub fn new(index: String) -> Result<TantivyReader, tantivy::TantivyError> {
+	pub fn new(index: String) -> Result<TantivyReader, StoreError> {
 		let path = Path::new(&index);
 		let mmap_dir = MmapDirectory::open(path)?;
 		let index = Index::open(mmap_dir)?;
-
+		let reader = index.reader_builder().reload_policy(ReloadPolicy::OnCommit).try_into()?;
+		let searcher = reader.searcher();
+		let schema = searcher.schema();
 		let mut query_parser = QueryParser::for_index(&index, vec![index.schema().get_field("creator").unwrap(),index.schema().get_field("title").unwrap(), index.schema().get_field("description").unwrap()]);
 		query_parser.set_conjunction_by_default();
 		Ok(TantivyReader {
-			reader: index
-				.reader_builder()
-				.reload_policy(ReloadPolicy::OnCommit)
-				.try_into()?,
-			query_parser
+			reader,
+			query_parser,
+			id_field:TantivyReader::get_field(schema, "id")?,
+			tags_field:TantivyReader::get_field(schema, "tags")?,
 		})
+	}
+
+	pub fn get_field(schema:&Schema, field_name:&str) -> Result<Field, StoreError> {
+		match schema.get_field(field_name) {
+			Some(f) => Ok(f),
+			None => Err(StoreError::InitError( format!("Mismatching schema - specified field {} does not exist in tantivy schema for this index.", field_name).to_string() )),
+		}
+	}
+
+	//    /api/search
+	pub fn search(&self, query: &str, start:usize, limit:usize) -> Result<String, StoreError> {
+		let searcher = &self.reader.searcher();
+
+		let query_parsed = &self.query_parser.parse_query(query);
+		let tquery = match query_parsed {
+			Err(e) => return Ok(self.get_error_response(&get_query_error(&e))),
+			Ok(q) => q,
+		};
+
+		let top_collector = TopDocs::with_limit(start + limit);
+		let count_collector = Count;
+		let docs = searcher.search(tquery, &(top_collector, count_collector))?;
+		let num_docs = docs.0.len();
+
+		//json encode query value
+		let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start, query.replace("\"","\\\"")).to_owned();
+		for (i,doc_addr) in docs.0.iter().enumerate() {
+			if (i+1)>start {
+				let retrieved = match searcher.doc(doc_addr.1) {
+					Ok(doc) => doc,
+					Err(_) => continue,
+				};
+
+				json_str.push_str(match &serde_json::to_string(&self.to_bm(&retrieved, &searcher.schema())) {
+					Ok(str) => str,
+					Err(_) => continue,
+				});
+
+				if (i+1)!=num_docs {
+					json_str.push_str(",");
+				}
+			}
+		}
+		json_str.push_str("]}");
+
+		Ok(json_str)
+	}
+
+	pub fn get_book(&self, id: i64) -> Option<BookMetadata> {
+		let searcher = &self.reader.searcher();
+		let id_term = Term::from_field_i64(self.id_field, id);
+		let term_query = TermQuery::new(id_term, IndexRecordOption::Basic);
+
+		//could this be better with TopFieldCollector which uses a FAST field?
+		let docs = searcher.search(&term_query, &TopDocs::with_limit(1)).unwrap();
+
+		if docs.len()==1 {
+			match docs.first() {
+				Some(doc_addr) => match searcher.doc(doc_addr.1) {
+					Ok(doc) => Some(self.to_bm(&doc, searcher.schema())),
+					Err(e) => {println!("Doc disappeared. id:{}, err: {}", id, e); None},
+				},
+				None => {println!("Doc disappeared. id:{}", id); None},
+			}
+		} else {
+			println!("Found {} matching docs for supposedly unique id {}.", docs.len(), id);
+			None
+		}
+	}
+
+	fn get_error_response(&self, client_error: &ClientError) -> String {
+		format!("{{\"error\":[{:?}]}}", serde_json::to_string(client_error))
+	}
+
+	fn to_bm(&self, doc: &tantivy::Document, schema: &Schema) -> BookMetadata {
+		BookMetadata {
+			id: self.get_doc_i64("id", &doc, &schema), //not populated ?
+			title: self.get_doc_str("title", &doc, &schema),
+			description: self.get_doc_str("description", &doc, &schema),
+			publisher: self.get_doc_str("publisher", &doc, &schema),
+			creator: self.get_doc_str("creator", &doc, &schema),
+			subject: self.get_tags("tags", &doc),
+			file: self.get_doc_str("file", &doc, &schema).unwrap(),
+			filesize: self.get_doc_i64("filesize", &doc, &schema),
+			modtime: self.get_doc_i64("modtime", &doc, &schema),
+			pubdate: self.get_doc_str("pubdate", &doc, &schema),
+			moddate: self.get_doc_str("moddate", &doc, &schema),
+			cover_mime: self.get_doc_str("cover_mime", &doc, &schema),
+		}
+	}
+
+		//I *know* the fields are present in schema, and I *know* that certain fields eg id are always populated, so just unwrap() here
+	fn get_doc_str(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> Option<String> {
+		doc.get_first(schema.get_field(field).unwrap()).map(|val| match val.text() {
+			Some(t) => t.to_string(),
+			_ => "".to_string(),
+		})
+	}
+
+	fn get_doc_i64(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> i64 {
+		doc.get_first(schema.get_field(field).unwrap()).unwrap().i64_value()
+	}
+
+	fn get_tags(&self, _field: &str, doc: &tantivy::Document) -> Option<Vec<String>> {
+		let vals: Vec<&tantivy::schema::Value> = doc.get_all(self.tags_field);
+		if vals.is_empty() {
+			return None;
+		}
+		let mut tags = Vec::new();
+
+		for v in vals {
+			tags.push(
+				match v {
+					 tantivy::schema::Value::Facet(f) => f.encoded_str(),
+					_ => "",
+				}
+				.to_string(),
+			)
+		}
+
+		Some(tags)
 	}
 }
