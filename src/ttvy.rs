@@ -7,19 +7,18 @@ use std::io;
 use std::path::Path;
 use std::process;
 
-use tantivy::directory::MmapDirectory;
-use tantivy::schema::*;
-use tantivy::{Index, IndexReader, ReloadPolicy};
-use tantivy::IndexWriter;
-//use tantivy::schema::Value::Facet;
 use tantivy::collector::{Count, TopDocs};
+use tantivy::directory::MmapDirectory;
 use tantivy::query::TermQuery;
+use tantivy::schema::*;
+use tantivy::IndexWriter;
+use tantivy::{Index, IndexReader, ReloadPolicy};
 
 use ammonia::{Builder, UrlRelative};
+use error::{get_query_error, ClientError, StoreError};
+use tantivy::query::QueryParser;
 use BookMetadata;
 use BookWriter;
-use tantivy::query::QueryParser;
-use error::{ClientError,StoreError,get_query_error};
 
 pub struct TantivyWriter<'a> {
 	index_writer: IndexWriter,
@@ -131,7 +130,10 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 			ttdoc.add_text(self.title, &bm.title.unwrap_or_else(|| "".to_string()));
 			ttdoc.add_text(
 				self.description,
-				self.sanitiser.clean(&bm.description.unwrap_or_else(|| "".to_string())).to_string().as_str(),
+				self.sanitiser
+					.clean(&bm.description.unwrap_or_else(|| "".to_string()))
+					.to_string()
+					.as_str(),
 			);
 			ttdoc.add_text(self.publisher, &bm.publisher.unwrap_or_else(|| "".to_string()));
 			ttdoc.add_text(self.creator, &bm.creator.unwrap_or_else(|| "".to_string()));
@@ -192,25 +194,38 @@ impl TantivyReader {
 		let reader = index.reader_builder().reload_policy(ReloadPolicy::OnCommit).try_into()?;
 		let searcher = reader.searcher();
 		let schema = searcher.schema();
-		let mut query_parser = QueryParser::for_index(&index, vec![index.schema().get_field("creator").unwrap(),index.schema().get_field("title").unwrap(), index.schema().get_field("description").unwrap()]);
+		let mut query_parser = QueryParser::for_index(
+			&index,
+			vec![
+				index.schema().get_field("creator").unwrap(),
+				index.schema().get_field("title").unwrap(),
+				index.schema().get_field("description").unwrap(),
+			],
+		);
 		query_parser.set_conjunction_by_default();
 		Ok(TantivyReader {
 			reader,
 			query_parser,
-			id_field:TantivyReader::get_field(schema, "id")?,
-			tags_field:TantivyReader::get_field(schema, "tags")?,
+			id_field: TantivyReader::get_field(schema, "id")?,
+			tags_field: TantivyReader::get_field(schema, "tags")?,
 		})
 	}
 
-	pub fn get_field(schema:&Schema, field_name:&str) -> Result<Field, StoreError> {
+	pub fn get_field(schema: &Schema, field_name: &str) -> Result<Field, StoreError> {
 		match schema.get_field(field_name) {
 			Some(f) => Ok(f),
-			None => Err(StoreError::InitError( format!("Mismatching schema - specified field {} does not exist in tantivy schema for this index.", field_name).to_string() )),
+			None => Err(StoreError::InitError(
+				format!(
+					"Mismatching schema - specified field {} does not exist in tantivy schema for this index.",
+					field_name
+				)
+				.to_string(),
+			)),
 		}
 	}
 
 	//    /api/search
-	pub fn search(&self, query: &str, start:usize, limit:usize) -> Result<String, StoreError> {
+	pub fn search(&self, query: &str, start: usize, limit: usize) -> Result<String, StoreError> {
 		let searcher = &self.reader.searcher();
 
 		let query_parsed = &self.query_parser.parse_query(query);
@@ -225,9 +240,15 @@ impl TantivyReader {
 		let num_docs = docs.0.len();
 
 		//json encode query value
-		let mut json_str: String = format!("{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[", docs.1, start, query.replace("\"","\\\"")).to_owned();
-		for (i,doc_addr) in docs.0.iter().enumerate() {
-			if (i+1)>start {
+		let mut json_str: String = format!(
+			"{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[",
+			docs.1,
+			start,
+			query.replace("\"", "\\\"")
+		)
+		.to_owned();
+		for (i, doc_addr) in docs.0.iter().enumerate() {
+			if (i + 1) > start {
 				let retrieved = match searcher.doc(doc_addr.1) {
 					Ok(doc) => doc,
 					Err(_) => continue,
@@ -238,7 +259,7 @@ impl TantivyReader {
 					Err(_) => continue,
 				});
 
-				if (i+1)!=num_docs {
+				if (i + 1) != num_docs {
 					json_str.push_str(",");
 				}
 			}
@@ -254,19 +275,30 @@ impl TantivyReader {
 		let term_query = TermQuery::new(id_term, IndexRecordOption::Basic);
 
 		//could this be better with TopFieldCollector which uses a FAST field?
-		let docs = searcher.search(&term_query, &TopDocs::with_limit(1)).unwrap();
+		let maybedocs = searcher.search(&term_query, &TopDocs::with_limit(1));
 
-		if docs.len()==1 {
-			match docs.first() {
-				Some(doc_addr) => match searcher.doc(doc_addr.1) {
-					Ok(doc) => Some(self.to_bm(&doc, searcher.schema())),
-					Err(e) => {println!("Doc disappeared. id:{}, err: {}", id, e); None},
-				},
-				None => {println!("Doc disappeared. id:{}", id); None},
+		match maybedocs {
+			Ok(docs) => {
+				if docs.len() == 1 {
+					match docs.first() {
+						Some(doc_addr) => match searcher.doc(doc_addr.1) {
+							Ok(doc) => Some(self.to_bm(&doc, searcher.schema())),
+							Err(e) => {
+								println!("Doc disappeared. id:{}, err: {}", id, e);
+								None
+							}
+						},
+						None => {
+							println!("Doc disappeared. id:{}", id);
+							None
+						}
+					}
+				} else {
+					println!("Found {} matching docs for supposedly unique id {}.", docs.len(), id);
+					None
+				}
 			}
-		} else {
-			println!("Found {} matching docs for supposedly unique id {}.", docs.len(), id);
-			None
+			Err(_) => None,
 		}
 	}
 
@@ -291,7 +323,7 @@ impl TantivyReader {
 		}
 	}
 
-		//I *know* the fields are present in schema, and I *know* that certain fields eg id are always populated, so just unwrap() here
+	//I *know* the fields are present in schema, and I *know* that certain fields eg id are always populated, so just unwrap() here
 	fn get_doc_str(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> Option<String> {
 		doc.get_first(schema.get_field(field).unwrap()).map(|val| match val.text() {
 			Some(t) => t.to_string(),
@@ -313,7 +345,7 @@ impl TantivyReader {
 		for v in vals {
 			tags.push(
 				match v {
-					 tantivy::schema::Value::Facet(f) => f.encoded_str(),
+					tantivy::schema::Value::Facet(f) => f.encoded_str(),
 					_ => "",
 				}
 				.to_string(),

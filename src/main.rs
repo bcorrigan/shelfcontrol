@@ -14,15 +14,15 @@ extern crate rouille;
 #[macro_use]
 extern crate serde_derive;
 extern crate core;
+extern crate failure;
+extern crate itertools;
 extern crate serde;
 extern crate serde_json;
-extern crate itertools;
-extern crate failure;
 
-use std::io::Write;
 use chrono::{DateTime, Local};
 use clap::{App, Arg};
 use epub::doc::EpubDoc;
+use itertools::Itertools;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
@@ -30,17 +30,17 @@ use std::fs;
 use std::fs::File;
 use std::hash::{Hash, Hasher};
 use std::io;
+use std::io::Write;
 use std::path::Path;
 use std::process;
 use std::time::SystemTime;
 use walkdir::WalkDir;
-use itertools::Itertools;
 
 use server::Server;
 
+mod error;
 mod server;
 mod ttvy;
-mod error;
 
 //to embed resources use rust-embed or include_str
 
@@ -167,14 +167,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	if matches.is_present("search") {
 		match ttvy::TantivyReader::new(value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string())) {
-			Ok(reader) => { let server = Server::new(
-				reader,
-				"localhost",
-				8000,
-				true,
-				Some(value_t!(matches, "coverdir", String).unwrap_or_else(|_| ".shelfcontrol/covers".to_string())))?;
-			server.serve()
-		},
+			Ok(reader) => {
+				let server = Server::new(
+					reader,
+					"localhost",
+					8000,
+					true,
+					Some(value_t!(matches, "coverdir", String).unwrap_or_else(|_| ".shelfcontrol/covers".to_string())),
+				)?;
+				match server.serve() {
+					Err(e) => panic!("Could not start server, error: {}", e),
+					Ok(_) => (),
+				}
+			}
 			Err(_) => panic!("Could not read given index."),
 		};
 	}
@@ -189,12 +194,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	let mut writer: Box<dyn BookWriter> = match matches.value_of("db").unwrap_or("tantivy") {
 		//"sqlite" => Box::new(sqlite::SqliteWriter::new( value_t!(matches, "dbfile", String).unwrap_or("repubin.sqlite".to_string()) )? ),
-		"tantivy" => Box::new(
-			match ttvy::TantivyWriter::new(value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string())) {
-				Ok(writer) => Ok(writer),
-				Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),
-			}?,
-		),
+		"tantivy" => Box::new(match ttvy::TantivyWriter::new(
+			value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string()),
+		) {
+			Ok(writer) => Ok(writer),
+			Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),
+		}?),
 		_ => process::exit(2),
 	};
 
@@ -282,7 +287,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	writer.write_tags(tags, 10)
 }
 
-fn parse_epub(book_loc: &str, use_coverdir:bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<dyn Error>> {
+fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<dyn Error>> {
 	let mut doc = EpubDoc::new(&book_loc)?;
 	//	println!("Got doc! {}", &book_loc);
 	let metadata = fs::metadata(&book_loc)?;
@@ -294,16 +299,16 @@ fn parse_epub(book_loc: &str, use_coverdir:bool, coverdir: Option<&str>) -> Resu
 		},
 	};
 
-	let cover_img = if use_coverdir {
-		doc.get_cover().ok()
-	} else { None };
+	let cover_img = if use_coverdir { doc.get_cover().ok() } else { None };
 
 	let cover_mime = if use_coverdir {
 		match doc.get_cover_id() {
-			Ok(cover_id) => doc.get_resource_mime(&cover_id).ok() ,
+			Ok(cover_id) => doc.get_resource_mime(&cover_id).ok(),
 			Err(_) => None,
 		}
-	} else { None };
+	} else {
+		None
+	};
 
 	let mut bm = BookMetadata {
 		id: 0i64,
@@ -317,16 +322,18 @@ fn parse_epub(book_loc: &str, use_coverdir:bool, coverdir: Option<&str>) -> Resu
 		modtime,
 		pubdate: get_first_fd("date", &doc.metadata),
 		moddate: get_first_fd("date", &doc.metadata),
-		cover_mime
+		cover_mime,
 	};
 
 	bm.id = hash_md(&bm) as i64;
 
 	if use_coverdir {
 		match cover_img {
-			Some(cover) => { let mut file = File::create(format!("{}/{}",coverdir.unwrap(),&bm.id))?;
-							 file.write_all(&cover)? },
-			None => println!("No cover for {}", &bm.file)
+			Some(cover) => {
+				let mut file = File::create(format!("{}/{}", coverdir.unwrap(), &bm.id))?;
+				file.write_all(&cover)?
+			}
+			None => println!("No cover for {}", &bm.file),
 		}
 	}
 
@@ -350,8 +357,8 @@ fn get_first_fd(mdfield: &str, md: &HashMap<String, Vec<String>>) -> Option<Stri
 fn unmangle_creator(creator: String) -> String {
 	let unspaced_creator = creator.split_whitespace().join(" ");
 	if unspaced_creator.matches(',').count() == 1 {
-		let parts:Vec<&str> = unspaced_creator.split(',').collect();
-		return format!("{} {}",parts[1].trim(), parts[0].trim());
+		let parts: Vec<&str> = unspaced_creator.split(',').collect();
+		return format!("{} {}", parts[1].trim(), parts[0].trim());
 	}
 	unspaced_creator
 }

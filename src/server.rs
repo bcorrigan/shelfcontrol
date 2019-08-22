@@ -2,11 +2,12 @@ use ttvy::TantivyReader;
 
 use epub::doc::EpubDoc;
 
-use std::io;
+use error::ClientError;
+use rouille::Response;
 use std::fmt;
 use std::fs::File;
+use std::io;
 use std::io::prelude::*;
-use error::ClientError;
 
 pub struct Server {
 	pub reader: TantivyReader,
@@ -21,19 +22,19 @@ pub struct ServerError {
 	msg: String,
 }
 
-impl std::error::Error for ServerError{}
+impl std::error::Error for ServerError {}
 
 impl fmt::Display for ServerError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{}", self.msg)
-    }
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "{}", self.msg)
+	}
 }
 
 impl Server {
-	pub fn new(reader:TantivyReader,host:&str,port:u32, use_coverdir:bool, coverdir:Option<String>) -> Result<Server, ServerError> {
+	pub fn new(reader: TantivyReader, host: &str, port: u32, use_coverdir: bool, coverdir: Option<String>) -> Result<Server, ServerError> {
 		Ok(Server {
 			reader,
-			host:host.to_string(),
+			host: host.to_string(),
 			port,
 			use_coverdir,
 			coverdir,
@@ -65,22 +66,29 @@ impl Server {
 						};
 
 						return match self.reader.search(query_str, start, limit) {
-							Ok(response) => rouille::Response::from_data("application/json", response).with_additional_header("Access-Control-Allow-Origin", "*"),
+							Ok(response) => Response::from_data("application/json", response).with_additional_header("Access-Control-Allow-Origin", "*"),
 							Err(e) => { println!("Error searching tantivy: {}", e); self.get_str_error_response("Server error","There was a server side error.").with_status_code(500) },
 						}
 					},
 					(GET) (/api/book/{id: i64}) => {
 						return match self.reader.get_book(id) {
-							Some(doc) => { let mut f = File::open(doc.file).unwrap();
+							Some(doc) => {
+								let mut f = match File::open(doc.file) {
+									Ok(f) => f,
+									Err(_) => {println!("Book {} vanished since indexed.", id); return Response::empty_404()},
+								};
 								let mut buffer = Vec::new();
 								// read the whole file
-								f.read_to_end(&mut buffer).unwrap();
-								rouille::Response::from_data("application/epub+zip", buffer).with_additional_header("Access-Control-Allow-Origin", "*")
-																							.with_content_disposition_attachment(&format!("{} - {}", 
-																							doc.creator.unwrap_or("unknown".to_string()), 
+								match f.read_to_end(&mut buffer) {
+									Ok(_) => (),
+									Err(_) => {println!("Could not read all of book {} from file system.", id); return Response::empty_404()},
+								}
+								Response::from_data("application/epub+zip", buffer).with_additional_header("Access-Control-Allow-Origin", "*")
+																							.with_content_disposition_attachment(&format!("{} - {}",
+																							doc.creator.unwrap_or("unknown".to_string()),
 																							doc.title.unwrap_or("unknown author".to_string())))
 							},
-							None => rouille::Response::empty_404(),
+							None => Response::empty_404(),
 						}
 					},
 					(GET) (/img/{id: i64}) => {
@@ -89,41 +97,57 @@ impl Server {
 								if self.use_coverdir {
 									let mime = match doc.cover_mime {
 										Some(mime) => mime,
-										None =>  return rouille::Response::empty_404()
+										None =>  return Response::empty_404(),
 									};
 									if mime.is_empty() {
-										return rouille::Response::empty_404();
+										return Response::empty_404();
 									}
 
-									let mut imgfile = File::open(format!("{}/{}",self.coverdir.clone().unwrap(),id)).unwrap();
+									let mut imgfile = match File::open(format!("{}/{}",self.coverdir.clone().unwrap_or(".".to_string()),id)) {
+										Ok(file) => file,
+										Err(_) => {println!("Could not open img {}.", id); return Response::empty_404()},
+									};
 									let mut imgbytes = Vec::new();
 									match imgfile.read_to_end(&mut imgbytes) {
 										Ok(_) => {
-											rouille::Response::from_data(mime, imgbytes).with_additional_header("Access-Control-Allow-Origin", "*")
+											Response::from_data(mime, imgbytes).with_additional_header("Access-Control-Allow-Origin", "*")
 										},
-										Err(_) => rouille::Response::empty_404(),
+										Err(_) => {println!("Could not read img file to end for book {}.", id); Response::empty_404()},
 									}
 								} else {
 									//ok doing it inline like this for a very low use server
-									let mut epub = EpubDoc::new(doc.file).unwrap();
+									let mut epub = match EpubDoc::new(doc.file) {
+										Ok(epub) => epub,
+										Err(_) => return Response::empty_404(),
+									};
 									match epub.get_cover() {
-										Ok(cover) => { let mime = epub.get_resource_mime(&epub.get_cover_id().unwrap()).unwrap();
-													   rouille::Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*") },
-													Err(_) => rouille::Response::empty_404(),
+										Ok(cover) => {
+												let cover_id_opt = &epub.get_cover_id();
+												let cover_id = match cover_id_opt {
+													Ok(id) => id,
+													Err(_) => {println!("No cover id in book {}", id); return Response::empty_404()},
+												};
+												let mime = match epub.get_resource_mime(cover_id) {
+													Ok(mime) => mime,
+													Err(_) => {println!("No mime in book {}", id); return Response::empty_404()},
+												};
+												Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*")
+											},
+										Err(_) => Response::empty_404(),
 									}
 								}
 							},
-							None => rouille::Response::empty_404(),
+							None => Response::empty_404(),
 						}
 					},
-					_ => rouille::Response::empty_404()
+					_ => Response::empty_404()
 				)
 			})
 		})
 	}
 
-	fn get_str_error_response(&self, name: &str, msg: &str) -> rouille::Response {
-		rouille::Response::from_data(
+	fn get_str_error_response(&self, name: &str, msg: &str) -> Response {
+		Response::from_data(
 			"application/json",
 			format!(
 				"{{\"error\":[{:?}]}}",
@@ -132,6 +156,7 @@ impl Server {
 					msg: msg.to_string(),
 				})
 			),
-		).with_additional_header("Access-Control-Allow-Origin", "*")
+		)
+		.with_additional_header("Access-Control-Allow-Origin", "*")
 	}
 }
