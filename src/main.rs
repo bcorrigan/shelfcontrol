@@ -184,16 +184,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		};
 	}
 
-	let use_coverdir = matches.is_present("coverdir");
-	let coverdir = matches.value_of("coverdir");
-
-	if use_coverdir && !Path::new(coverdir.unwrap()).exists() {
-		println!("Covers directory {} does not exist.", coverdir.unwrap());
-		process::exit(4);
-	}
+    let (use_coverdir, coverdir) = match matches.value_of("coverdir") {
+        Some(coverdir) => if Path::new(coverdir).exists() {
+            (true, Some(coverdir))
+        } else {
+            eprintln!("Covers directory {} does not exist.", coverdir);
+		    process::exit(4);
+        },
+        None => (false, None),
+    };
 
 	let mut writer: Box<dyn BookWriter> = match matches.value_of("db").unwrap_or("tantivy") {
-		//"sqlite" => Box::new(sqlite::SqliteWriter::new( value_t!(matches, "dbfile", String).unwrap_or("repubin.sqlite".to_string()) )? ),
 		"tantivy" => Box::new(match ttvy::TantivyWriter::new(
 			value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string()),
 		) {
@@ -207,7 +208,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	for directory in &dirs {
 		if !Path::new(&directory).exists() {
-			println!("Directory {} does not exist.", &directory);
+			eprintln!("Directory {} does not exist.", &directory);
 			process::exit(3);
 		}
 	}
@@ -254,14 +255,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 									println!("DUPLICATE: {}", &l.path().display());
 								}
 							}
-							Err(err) => println!("Error with {}: {:?}", &l.path().display(), err),
+							Err(err) => eprintln!("Error with {}: {:?}", &l.path().display(), err),
 						}
 
 						processed += 1;
 
 						if processed % 1000 == 0 {
 							if let Err(e) = writer.write_epubs(books, &mut tags) {
-								println!("Error writing batch:{}", e);
+								eprintln!("Error writing batch:{}", e);
 							}
 
 							books = Vec::new();
@@ -270,12 +271,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 						}
 					}
 				}
-				Err(_) => process::exit(1),
+				Err(e) => {
+                    eprintln!("Unrecoverable error while scanning books:{}", e);
+                    process::exit(1);
+                }
 			}
 		}
 	}
 	if let Err(e) = writer.write_epubs(books, &mut tags) {
-		println!("Error writing batch:{}", e);
+		eprintln!("Error writing batch:{}", e);
 	}
 
 	report_progress(processed, total_books, wrote, batch_start, scan_start);
@@ -289,11 +293,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<dyn Error>> {
 	let mut doc = EpubDoc::new(&book_loc)?;
-	//	println!("Got doc! {}", &book_loc);
 	let metadata = fs::metadata(&book_loc)?;
-	let modtime = match metadata.modified().unwrap().duration_since(std::time::UNIX_EPOCH) {
+	let modtime = match metadata.modified().unwrap_or(std::time::UNIX_EPOCH).duration_since(std::time::UNIX_EPOCH) {
 		Ok(t) => t.as_secs() as i64,
-		Err(_) => match std::time::UNIX_EPOCH.duration_since(metadata.modified().unwrap()) {
+		Err(_) => match std::time::UNIX_EPOCH.duration_since(metadata.modified().unwrap_or(std::time::UNIX_EPOCH)) {
 			Ok(t) => -(t.as_secs() as i64),
 			Err(_) => panic!("Impossible time for {}", &book_loc),
 		},
@@ -310,6 +313,12 @@ fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Res
 		None
 	};
 
+    let file = match Path::new(&book_loc).canonicalize() {
+        Ok(f) => f.display().to_string(),
+        Err(e) => { eprintln!("Could not canonicalize {}", &e);
+                    return Err(Box::new(e)) },
+    };
+
 	let mut bm = BookMetadata {
 		id: 0i64,
 		title: get_first_fd("title", &doc.metadata),
@@ -317,7 +326,7 @@ fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Res
 		publisher: get_first_fd("publisher", &doc.metadata),
 		creator: get_first_fd("creator", &doc.metadata).map(unmangle_creator),
 		subject: doc.metadata.get("subject").cloned(),
-		file: Path::new(&book_loc).canonicalize().unwrap().display().to_string(),
+		file: file,
 		filesize: metadata.len() as i64,
 		modtime,
 		pubdate: get_first_fd("date", &doc.metadata),
@@ -330,18 +339,18 @@ fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Res
 	if use_coverdir {
 		match cover_img {
 			Some(cover) => {
-				let mut file = File::create(format!("{}/{}", coverdir.unwrap(), &bm.id))?;
-				file.write_all(&cover)?
+				let mut file = File::create(format!("{}/{}", coverdir.unwrap(), &bm.id)).or_else(|e| {
+                        eprintln!("Could not create cover file for {}", &book_loc);
+                        Err(e)
+                })?;
+				file.write_all(&cover).or_else(|e| {
+                        eprintln!("Error writing to cover dir for {}", &book_loc);
+                        Err(e)
+                })?;
 			}
 			None => println!("No cover for {}", &bm.file),
 		}
 	}
-
-	/*println!(
-		"extracted:{} by {}",
-		bm.title.clone().unwrap_or("Unknown".to_string()),
-		bm.creator.clone().unwrap_or("Unknown".to_string())
-	);*/
 
 	Ok(bm)
 }
