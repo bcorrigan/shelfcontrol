@@ -175,12 +175,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 					true,
 					Some(value_t!(matches, "coverdir", String).unwrap_or_else(|_| ".shelfcontrol/covers".to_string())),
 				)?;
-				match server.serve() {
-					Err(e) => panic!("Could not start server, error: {}", e),
-					Ok(_) => (),
-				}
+				server.serve().expect("Could not start server.");
 			}
-			Err(_) => panic!("Could not read given index."),
+			Err(e) => panic!("Could not read given index: {}", e),
 		};
 	}
 
