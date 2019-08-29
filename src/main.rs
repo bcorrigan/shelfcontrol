@@ -34,6 +34,7 @@ mod error;
 mod server;
 mod ttvy;
 mod scanner;
+mod test;
 
 //to embed resources use rust-embed or include_str
 

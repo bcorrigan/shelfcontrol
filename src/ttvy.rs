@@ -186,6 +186,8 @@ pub struct TantivyReader {
 	tags_field: Field,
 }
 
+//this returns json for all methods just now. But when OPDF is implemented should make this more generic (return structs) 
+//and move JSON generation elsewhere
 impl TantivyReader {
 	pub fn new(index: String) -> Result<TantivyReader, StoreError> {
 		let path = Path::new(&index);

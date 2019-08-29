@@ -52,22 +52,22 @@ impl Server {
 						let query_param = &request.get_param("query");
 						let query_str = match query_param {
 							Some(query) => query,
-							None => return self.get_str_error_response("Query error", "\"query\" should be provided when performing a query")
+							None => return self.get_json_error_response("Query error", "\"query\" should be provided when performing a query")
 						}.trim();
 
 						let start = match request.get_param("start").unwrap_or_else(|| "0".to_string()).parse::<usize>() {
 							Ok(start) => start,
-							Err(_) => return self.get_str_error_response("Type error", "\"start\" should have an integer argument"),
+							Err(_) => return self.get_json_error_response("Type error", "\"start\" should have an integer argument"),
 						};
 
 						let limit = match request.get_param("limit").unwrap_or_else(|| "20".to_string()).parse::<usize>() {
 							Ok(lim) => lim,
-							Err(_) => return self.get_str_error_response("Type error", "\"limit\" should have an integer argument"),
+							Err(_) => return self.get_json_error_response("Type error", "\"limit\" should have an integer argument"),
 						};
 
 						return match self.reader.search(query_str, start, limit) {
 							Ok(response) => Response::from_data("application/json", response).with_additional_header("Access-Control-Allow-Origin", "*"),
-							Err(e) => { println!("Error searching tantivy: {}", e); self.get_str_error_response("Server error","There was a server side error.").with_status_code(500) },
+							Err(e) => { println!("Error searching tantivy: {}", e); self.get_json_error_response("Server error","There was a server side error.").with_status_code(500) },
 						}
 					},
 					(GET) (/api/book/{id: i64}) => {
@@ -146,7 +146,7 @@ impl Server {
 		})
 	}
 
-	fn get_str_error_response(&self, name: &str, msg: &str) -> Response {
+	fn get_json_error_response(&self, name: &str, msg: &str) -> Response {
 		Response::from_data(
 			"application/json",
 			format!(
