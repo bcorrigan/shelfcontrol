@@ -3,6 +3,7 @@ use ttvy::TantivyReader;
 use epub::doc::EpubDoc;
 
 use error::ClientError;
+use error::StoreError;
 use rouille::Response;
 use std::fmt;
 use std::fs::File;
@@ -66,10 +67,17 @@ impl Server {
 						};
 
 						return match self.reader.search(query_str, start, limit) {
-							Ok(response) => Response::from_data("application/json", response).with_additional_header("Access-Control-Allow-Origin", "*"),
-							Err(e) => { println!("Error searching tantivy: {}", e); self.get_json_error_response("Server error","There was a server side error.").with_status_code(500) },
-						}
-					},
+							Ok(response) => Response::from_data("application/json", response.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
+							Err(e) => {
+                                if let StoreError::ClientError(ce) = e {
+                                    Response::from_data("application/json", ce.get_error_response_json()).with_additional_header("Access-Control-Allow-Origin", "*")
+                                } else {
+                                    println!("Error searching tantivy: {}", e);
+                                    self.get_json_error_response("Server error","There was a server side error.").with_status_code(500)
+                                }
+						    }
+					    }
+                    },
 					(GET) (/api/book/{id: i64}) => {
 						return match self.reader.get_book(id) {
 							Some(doc) => {

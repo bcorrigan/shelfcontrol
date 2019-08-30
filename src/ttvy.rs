@@ -15,10 +15,11 @@ use tantivy::IndexWriter;
 use tantivy::{Index, IndexReader, ReloadPolicy};
 
 use ammonia::{Builder, UrlRelative};
-use error::{get_query_error, ClientError, StoreError};
+use error::{StoreError};
 use tantivy::query::QueryParser;
 use BookMetadata;
 use BookWriter;
+use search_result::SearchResult;
 
 pub struct TantivyWriter<'a> {
 	index_writer: IndexWriter,
@@ -186,7 +187,7 @@ pub struct TantivyReader {
 	tags_field: Field,
 }
 
-//this returns json for all methods just now. But when OPDF is implemented should make this more generic (return structs) 
+//this returns json for all methods just now. But when OPDF is implemented should make this more generic (return structs)
 //and move JSON generation elsewhere
 impl TantivyReader {
 	pub fn new(index: String) -> Result<TantivyReader, StoreError> {
@@ -227,28 +228,18 @@ impl TantivyReader {
 	}
 
 	//    /api/search
-	pub fn search(&self, query: &str, start: usize, limit: usize) -> Result<String, StoreError> {
+	pub fn search(&self, query: &str, start: usize, limit: usize) -> Result<SearchResult, StoreError> {
 		let searcher = &self.reader.searcher();
 
-		let query_parsed = &self.query_parser.parse_query(query);
-		let tquery = match query_parsed {
-			Err(e) => return Ok(self.get_error_response(&get_query_error(&e))),
-			Ok(q) => q,
-		};
+		let tquery = &self.query_parser.parse_query(query)?;
 
 		let top_collector = TopDocs::with_limit(start + limit);
 		let count_collector = Count;
 		let docs = searcher.search(tquery, &(top_collector, count_collector))?;
-		let num_docs = docs.0.len();
+		let count = docs.0.len();
 
-		//json encode query value
-		let mut json_str: String = format!(
-			"{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[",
-			docs.1,
-			start,
-			query.replace("\"", "\\\"")
-		)
-		.to_owned();
+        let mut books = Vec::new();
+
 		for (i, doc_addr) in docs.0.iter().enumerate() {
 			if (i + 1) > start {
 				let retrieved = match searcher.doc(doc_addr.1) {
@@ -256,19 +247,16 @@ impl TantivyReader {
 					Err(_) => continue,
 				};
 
-				json_str.push_str(match &serde_json::to_string(&self.to_bm(&retrieved, &searcher.schema())) {
-					Ok(str) => str,
-					Err(_) => continue,
-				});
-
-				if (i + 1) != num_docs {
-					json_str.push_str(",");
-				}
+				books.push(self.to_bm(&retrieved, &searcher.schema()));
 			}
 		}
-		json_str.push_str("]}");
 
-		Ok(json_str)
+        Ok(SearchResult {
+            count,
+            start,
+            query: query.to_string(),
+            books,
+        })
 	}
 
 	pub fn get_book(&self, id: i64) -> Option<BookMetadata> {
@@ -302,10 +290,6 @@ impl TantivyReader {
 			}
 			Err(_) => None,
 		}
-	}
-
-	fn get_error_response(&self, client_error: &ClientError) -> String {
-		format!("{{\"error\":[{:?}]}}", serde_json::to_string(client_error))
 	}
 
 	fn to_bm(&self, doc: &tantivy::Document, schema: &Schema) -> BookMetadata {

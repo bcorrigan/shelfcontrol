@@ -35,6 +35,7 @@ mod server;
 mod ttvy;
 mod scanner;
 mod test;
+mod search_result;
 
 //to embed resources use rust-embed or include_str
 
@@ -205,5 +206,3 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer)
 }
-
-
