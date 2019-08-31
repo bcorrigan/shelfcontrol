@@ -20,22 +20,22 @@ extern crate serde;
 extern crate serde_json;
 
 use clap::{App, Arg};
-use std::collections::{HashMap};
+use std::collections::hash_map::DefaultHasher;
+use std::collections::HashMap;
 use std::error::Error;
 use std::hash::{Hash, Hasher};
 use std::io;
 use std::path::Path;
 use std::process;
-use std::collections::hash_map::DefaultHasher;
 
 use server::Server;
 
 mod error;
-mod server;
-mod ttvy;
 mod scanner;
-mod test;
 mod search_result;
+mod server;
+mod test;
+mod ttvy;
 
 //to embed resources use rust-embed or include_str
 
@@ -182,15 +182,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		};
 	}
 
-    let (use_coverdir, coverdir) = match matches.value_of("coverdir") {
-        Some(coverdir) => if Path::new(coverdir).exists() {
-            (true, Some(coverdir))
-        } else {
-            eprintln!("Covers directory {} does not exist.", coverdir);
-		    process::exit(4);
-        },
-        None => (false, None),
-    };
+	let (use_coverdir, coverdir) = match matches.value_of("coverdir") {
+		Some(coverdir) => {
+			if Path::new(coverdir).exists() {
+				(true, Some(coverdir))
+			} else {
+				eprintln!("Covers directory {} does not exist.", coverdir);
+				process::exit(4);
+			}
+		}
+		None => (false, None),
+	};
 
 	let writer: Box<dyn BookWriter> = match matches.value_of("db").unwrap_or("tantivy") {
 		"tantivy" => Box::new(match ttvy::TantivyWriter::new(

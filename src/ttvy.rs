@@ -15,11 +15,11 @@ use tantivy::IndexWriter;
 use tantivy::{Index, IndexReader, ReloadPolicy};
 
 use ammonia::{Builder, UrlRelative};
-use error::{StoreError};
+use error::StoreError;
+use search_result::SearchResult;
 use tantivy::query::QueryParser;
 use BookMetadata;
 use BookWriter;
-use search_result::SearchResult;
 
 pub struct TantivyWriter<'a> {
 	index_writer: IndexWriter,
@@ -238,7 +238,7 @@ impl TantivyReader {
 		let docs = searcher.search(tquery, &(top_collector, count_collector))?;
 		let count = docs.0.len();
 
-        let mut books = Vec::new();
+		let mut books = Vec::new();
 
 		for (i, doc_addr) in docs.0.iter().enumerate() {
 			if (i + 1) > start {
@@ -251,12 +251,12 @@ impl TantivyReader {
 			}
 		}
 
-        Ok(SearchResult {
-            count,
-            start,
-            query: query.to_string(),
-            books,
-        })
+		Ok(SearchResult {
+			count,
+			start,
+			query: query.to_string(),
+			books,
+		})
 	}
 
 	pub fn get_book(&self, id: i64) -> Option<BookMetadata> {

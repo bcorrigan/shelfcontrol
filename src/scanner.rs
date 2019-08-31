@@ -16,8 +16,13 @@ use walkdir::WalkDir;
 use BookMetadata;
 use BookWriter;
 
-pub fn scan_dirs(dirs: Vec<String>, coverdir:Option<&str>, use_coverdir:bool, mut writer: Box<dyn BookWriter>) -> Result<(), Box<dyn std::error::Error>> {
-    for directory in &dirs {
+pub fn scan_dirs(
+	dirs: Vec<String>,
+	coverdir: Option<&str>,
+	use_coverdir: bool,
+	mut writer: Box<dyn BookWriter>,
+) -> Result<(), Box<dyn std::error::Error>> {
+	for directory in &dirs {
 		if !Path::new(&directory).exists() {
 			eprintln!("Directory {} does not exist.", &directory);
 			process::exit(3);
@@ -83,9 +88,9 @@ pub fn scan_dirs(dirs: Vec<String>, coverdir:Option<&str>, use_coverdir:bool, mu
 					}
 				}
 				Err(e) => {
-                    eprintln!("Unrecoverable error while scanning books:{}", e);
-                    process::exit(1);
-                }
+					eprintln!("Unrecoverable error while scanning books:{}", e);
+					process::exit(1);
+				}
 			}
 		}
 	}
@@ -105,7 +110,11 @@ pub fn scan_dirs(dirs: Vec<String>, coverdir:Option<&str>, use_coverdir:bool, mu
 fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<dyn Error>> {
 	let mut doc = EpubDoc::new(&book_loc)?;
 	let metadata = fs::metadata(&book_loc)?;
-	let modtime = match metadata.modified().unwrap_or(std::time::UNIX_EPOCH).duration_since(std::time::UNIX_EPOCH) {
+	let modtime = match metadata
+		.modified()
+		.unwrap_or(std::time::UNIX_EPOCH)
+		.duration_since(std::time::UNIX_EPOCH)
+	{
 		Ok(t) => t.as_secs() as i64,
 		Err(_) => match std::time::UNIX_EPOCH.duration_since(metadata.modified().unwrap_or(std::time::UNIX_EPOCH)) {
 			Ok(t) => -(t.as_secs() as i64),
@@ -124,11 +133,13 @@ fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Res
 		None
 	};
 
-    let file = match Path::new(&book_loc).canonicalize() {
-        Ok(f) => f.display().to_string(),
-        Err(e) => { eprintln!("Could not canonicalize {}", &e);
-                    return Err(Box::new(e)) },
-    };
+	let file = match Path::new(&book_loc).canonicalize() {
+		Ok(f) => f.display().to_string(),
+		Err(e) => {
+			eprintln!("Could not canonicalize {}", &e);
+			return Err(Box::new(e));
+		}
+	};
 
 	let mut bm = BookMetadata {
 		id: 0i64,
@@ -151,13 +162,13 @@ fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Res
 		match cover_img {
 			Some(cover) => {
 				let mut file = File::create(format!("{}/{}", coverdir.unwrap(), &bm.id)).or_else(|e| {
-                        eprintln!("Could not create cover file for {}", &book_loc);
-                        Err(e)
-                })?;
+					eprintln!("Could not create cover file for {}", &book_loc);
+					Err(e)
+				})?;
 				file.write_all(&cover).or_else(|e| {
-                        eprintln!("Error writing to cover dir for {}", &book_loc);
-                        Err(e)
-                })?;
+					eprintln!("Error writing to cover dir for {}", &book_loc);
+					Err(e)
+				})?;
 			}
 			None => println!("No cover for {}", &bm.file),
 		}
