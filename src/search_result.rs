@@ -1,4 +1,5 @@
-use BookMetadata;
+use BookMetadata; 
+use error::ClientError;
 //Responsible for representing search results, serialising into variopus formats etc
 
 #[derive(Debug)]
@@ -34,5 +35,11 @@ impl SearchResult {
 
 		json_str.push_str("]}");
 		json_str
+	}
+}
+
+impl ClientError {
+	pub fn get_error_response_json(&self) -> String {
+		format!("{{\"error\":[{:?}]}}", serde_json::to_string(&self))
 	}
 }

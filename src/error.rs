@@ -12,12 +12,6 @@ pub struct ClientError {
 	pub msg: String,
 }
 
-impl ClientError {
-	pub fn get_error_response_json(&self) -> String {
-		format!("{{\"error\":[{:?}]}}", serde_json::to_string(&self))
-	}
-}
-
 impl std::fmt::Display for ClientError {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
 		write!(f, "({}, {})", self.name, self.msg)
