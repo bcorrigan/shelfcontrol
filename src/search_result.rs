@@ -1,5 +1,5 @@
-use BookMetadata; 
 use error::ClientError;
+use BookMetadata;
 //Responsible for representing search results, serialising into variopus formats etc
 
 #[derive(Debug)]
