@@ -1,0 +1,18 @@
+@use opds::Header
+@(header: &Header)
+<?xml version="1.0" encoding="UTF-8"?>
+  <feed xmlns:opds="http://opds-spec.org/2010/catalog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0" xml:lang="en" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:app="http://www.w3.org/2007/app" xmlns:dc="http://purl.org/dc/terms/" xmlns:dcterms="http://purl.org/dc/terms/">
+    <id>@header.id</id>
+    <title>@header.title</title>
+    <icon>favicon.png</icon>
+    <updated>@header.date</updated>
+
+    <link rel="start" title="Home"
+          href="@header.url"
+          type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+    <link rel="self"
+          href="@header.url"
+          type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+    <link rel="search" title="Search"
+          href="@header.url?f=atom&amp;action=searchform"
+          type="application/opensearchdescription+xml"/>

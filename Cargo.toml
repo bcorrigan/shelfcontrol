@@ -2,6 +2,7 @@
 name = "shelfcontrol"
 version = "0.1.0"
 authors = ["bcorrigan <b.j.corrigan@gmail.com>"]
+build = "src/build.rs"
 
 [dependencies]
 epub = "1.2"
@@ -19,3 +20,6 @@ ammonia = "2"
 maplit = "1"
 itertools = "0.8"
 failure = "0.1"
+
+[build-dependencies]
+ructe = "^0.3"
