@@ -10,6 +10,14 @@ pub struct SearchResult {
 	pub books: Vec<BookMetadata>,
 }
 
+#[Derive(Debug)]
+pub struct OpdsPage {
+	pub id:String,
+	pub date:String,
+	pub title:String,
+	pub url:String,
+}
+
 impl SearchResult {
 	pub fn to_json(&self) -> String {
 		let mut json_str: String = format!(

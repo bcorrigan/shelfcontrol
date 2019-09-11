@@ -99,6 +99,16 @@ impl Server {
 							None => Response::empty_404(),
 						}
 					},
+                    (GET) (/opds/) => {
+                        return match self.reader.search("lovecraft", 0, 20) {
+                            Ok(search_result) => {
+                                let mut buf = Vec::new();
+                                templates::opds(search_result);
+                                Response::from_data("application/xml", buf)
+                            },
+                            Err(_) => return self.get_json_error_response("OPDS error", "OPDS Error"),
+                        }
+                    },
 					(GET) (/img/{id: i64}) => {
 						return match self.reader.get_book(id) {
 							Some(doc) => {
