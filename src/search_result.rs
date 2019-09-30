@@ -10,7 +10,7 @@ pub struct SearchResult {
 	pub books: Vec<BookMetadata>,
 }
 
-#[Derive(Debug)]
+#[derive(Debug)]
 pub struct OpdsPage {
 	pub id:String,
 	pub date:String,

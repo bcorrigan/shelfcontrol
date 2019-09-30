@@ -36,8 +36,7 @@ mod search_result;
 mod server;
 mod test;
 mod ttvy;
-//ructe templates
-include!(concat!(env!("OUT_DIR"), "/templates.rs"));
+
 
 //to embed resources use rust-embed or include_str
 

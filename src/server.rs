@@ -10,6 +10,9 @@ use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
+include!(concat!(env!("OUT_DIR"), "/templates.rs"));
+use templates::*;
+
 pub struct Server {
 	pub reader: TantivyReader,
 	pub host: String,
@@ -103,7 +106,7 @@ impl Server {
                         return match self.reader.search("lovecraft", 0, 20) {
                             Ok(search_result) => {
                                 let mut buf = Vec::new();
-                                templates::opds(search_result);
+                                templates::opds(&mut buf, search_result);
                                 Response::from_data("application/xml", buf)
                             },
                             Err(_) => return self.get_json_error_response("OPDS error", "OPDS Error"),

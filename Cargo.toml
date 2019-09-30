@@ -2,7 +2,7 @@
 name = "shelfcontrol"
 version = "0.1.0"
 authors = ["bcorrigan <b.j.corrigan@gmail.com>"]
-build = "build.rs"
+build = "src/build.rs"
 
 [dependencies]
 epub = "1.2"
