@@ -1,0 +1,39 @@
+@use search_result::OpdsPage;
+@use search_result::SearchResult;
+@(header: &OpdsPage, result: &SearchResult)
+<?xml version="1.0" encoding="UTF-8"?>
+  <feed xmlns:opds="http://opds-spec.org/2010/catalog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0" xml:lang="en" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:app="http://www.w3.org/2007/app" xmlns:dc="http://purl.org/dc/terms/" xmlns:dcterms="http://purl.org/dc/terms/">
+    <id>@header.id</id>
+    <title>@header.title</title>
+    <icon>favicon.png</icon>
+    <updated>@header.date</updated>
+
+    <link rel="start" title="Home"
+          href="@header.url"
+          type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+    <link rel="self"
+          href="@header.url"
+          type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
+    <link rel="search" title="Search"
+          href="@header.url?f=atom&amp;action=searchform"
+          type="application/opensearchdescription+xml"/>
+
+@for book in result.books {
+<entry>
+    <title>@book.title</title>
+    <id>@book.id</id>
+    <updated>@book.moddate</updated>
+    <author>
+       <name>@book.creator</name>
+    </author>
+    <dc:language>en_US</dc:language>
+    <dcterms:issued>@book.pubdate</dcterms:issued>
+    <dcterms:publisher>@book.publisher</dcterms:publisher>
+    <summary type="text">@book.description</summary>
+    <link rel="http://opds-spec.org/image" href="@book.id" type="image/jpeg"/>
+    <link rel="http://opds-spec.org/image/thumbnail" href="@book.id" type="image/jpeg"/>
+    <link rel="http://opds-spec.org/acquisition" href="@book.id" type="@book.cover_mime"/>
+</entry>
+}
+
+</feed>

@@ -11,7 +11,6 @@ use std::io;
 use std::io::prelude::*;
 
 include!(concat!(env!("OUT_DIR"), "/templates.rs"));
-use templates::*;
 
 pub struct Server {
 	pub reader: TantivyReader,
