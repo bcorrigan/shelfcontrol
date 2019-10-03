@@ -10,6 +10,8 @@ use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
+use search_result::OpdsPage;
+
 include!(concat!(env!("OUT_DIR"), "/templates.rs"));
 
 pub struct Server {
@@ -105,7 +107,7 @@ impl Server {
                         return match self.reader.search("lovecraft", 0, 20) {
                             Ok(search_result) => {
                                 let mut buf = Vec::new();
-                                templates::opds(&mut buf, search_result);
+                                templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"2".to_string(),title:"3".to_string(),url:"4".to_string()}, &search_result);
                                 Response::from_data("application/xml", buf)
                             },
                             Err(_) => return self.get_json_error_response("OPDS error", "OPDS Error"),

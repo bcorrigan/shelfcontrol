@@ -18,21 +18,25 @@
           href="@header.url?f=atom&amp;action=searchform"
           type="application/opensearchdescription+xml"/>
 
-@for book in result.books {
+@for book in &result.books {
 <entry>
-    <title>@book.title</title>
+    @if let Some(title) = &book.title { <title>@title</title> }
     <id>@book.id</id>
-    <updated>@book.moddate</updated>
+    @if let Some(moddate) = &book.moddate {<updated>@moddate</updated>}
+    @if let Some(creator) = &book.creator {
     <author>
-       <name>@book.creator</name>
-    </author>
+       <name>@creator</name>
+    </author> 
+    }
     <dc:language>en_US</dc:language>
-    <dcterms:issued>@book.pubdate</dcterms:issued>
-    <dcterms:publisher>@book.publisher</dcterms:publisher>
-    <summary type="text">@book.description</summary>
+    @if let Some(pubdate) = &book.pubdate {<dcterms:issued>@pubdate</dcterms:issued>}
+    @if let Some(publisher) = &book.publisher {<dcterms:publisher>@publisher</dcterms:publisher>}
+    @if let Some(description) = &book.description {<summary type="text">@description</summary>}
+    @if let Some(cover_mime) = &book.cover_mime {
     <link rel="http://opds-spec.org/image" href="@book.id" type="image/jpeg"/>
     <link rel="http://opds-spec.org/image/thumbnail" href="@book.id" type="image/jpeg"/>
-    <link rel="http://opds-spec.org/acquisition" href="@book.id" type="@book.cover_mime"/>
+    <link rel="http://opds-spec.org/acquisition" href="@book.id" type="@cover_mime"/>
+    }
 </entry>
 }
 
