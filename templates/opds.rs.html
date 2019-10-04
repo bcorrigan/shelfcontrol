@@ -33,9 +33,9 @@
     @if let Some(publisher) = &book.publisher {<dcterms:publisher>@publisher</dcterms:publisher>}
     @if let Some(description) = &book.description {<summary type="text">@description</summary>}
     @if let Some(cover_mime) = &book.cover_mime {
-    <link rel="http://opds-spec.org/image" href="@book.id" type="image/jpeg"/>
-    <link rel="http://opds-spec.org/image/thumbnail" href="@book.id" type="image/jpeg"/>
-    <link rel="http://opds-spec.org/acquisition" href="@book.id" type="@cover_mime"/>
+    <link rel="http://opds-spec.org/image" href="/img/@book.id" type="@cover_mime"/>
+    <link rel="http://opds-spec.org/image/thumbnail" href="/img/@book.id" type="@cover_mime"/>
+    <link rel="http://opds-spec.org/acquisition" href="/api/book/@book.id" type="application/epub+zip"/>
     }
 </entry>
 }
