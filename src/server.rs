@@ -104,11 +104,13 @@ impl Server {
 						}
 					},
                     (GET) (/opds/) => {
-                        return match self.reader.search("lovecraft", 0, 20) {
+                        return match self.reader.search("a", 0, 20) {
                             Ok(search_result) => {
                                 let mut buf = Vec::new();
-                                templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"2".to_string(),title:"3".to_string(),url:"4".to_string()}, &search_result);
-                                Response::from_data("application/xml", buf)
+                                match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"2".to_string(),title:"3".to_string(),url:"4".to_string()}, &search_result) {
+									Ok(_) => return Response::from_data("application/xml", buf),
+									Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
+								}
                             },
                             Err(_) => return self.get_json_error_response("OPDS error", "OPDS Error"),
                         }
