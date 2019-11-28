@@ -57,6 +57,16 @@ pub struct BookMetadata {
 	cover_mime: Option<String>,
 }
 
+//A navigation category (primarily for opds) 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct OpdsCategory {
+	id: i64,
+	moddate: String,
+	title: String,
+	url: String,
+	icon: Option<String>,
+}
+
 //Javascript can't cope with i64 so we use this for ID field to translate to string
 //lifted from https://github.com/serde-rs/json/issues/329
 mod string {

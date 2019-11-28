@@ -50,7 +50,7 @@ impl Server {
 	pub fn serve(self) -> Result<(), tantivy::TantivyError> {
 		println!("Starting server on localhost:8000");
 
-		rouille::start_server("localhost:8000", move |request| {
+		rouille::start_server("192.168.1.92:8000", move |request| {
 			rouille::log(&request, io::stdout(), || {
 				router!(request,
 					(GET) (/api/search) => {
@@ -106,8 +106,8 @@ impl Server {
                     (GET) (/opds) => {
                         return match self.reader.search("a", 0, 20) {
                             Ok(search_result) => {
-                                let mut buf = Vec::new();
-                                match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"now".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &search_result) {
+                                let mut buf = Vec::new(); 
+                                match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"now".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &Some(search_result), &None) {
 									Ok(_) => return Response::from_data("application/xml", buf),
 									Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
 								}
