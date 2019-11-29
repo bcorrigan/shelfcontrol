@@ -11,6 +11,7 @@ use std::io;
 use std::io::prelude::*;
 
 use search_result::OpdsPage;
+use OpdsCategory;
 
 include!(concat!(env!("OUT_DIR"), "/templates.rs"));
 
@@ -104,9 +105,20 @@ impl Server {
 						}
 					},
                     (GET) (/opds) => {
+						//in this case we return only root nav entries:
+						//Authors, Tags, Year of Publication, Author, Titles
+						/*let navs = vec!(
+							OpdsCategory {
+								id: 1,
+								moddate: "now".to_string(),
+								title: "Authors".to_string(),
+								url: "".to_string(),
+								icon: None,
+							}
+						);*/
                         return match self.reader.search("a", 0, 20) {
                             Ok(search_result) => {
-                                let mut buf = Vec::new(); 
+                                let mut buf = Vec::new();
                                 match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"now".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &Some(search_result), &None) {
 									Ok(_) => return Response::from_data("application/xml", buf),
 									Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
