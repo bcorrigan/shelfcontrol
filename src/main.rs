@@ -57,7 +57,7 @@ pub struct BookMetadata {
 	cover_mime: Option<String>,
 }
 
-//A navigation category (primarily for opds) 
+//A navigation category (primarily for opds)
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpdsCategory {
 	id: i64,
@@ -65,6 +65,18 @@ pub struct OpdsCategory {
 	title: String,
 	url: String,
 	icon: Option<String>,
+}
+
+impl OpdsCategory {
+	fn new(title: String, url: String) -> OpdsCategory {
+		OpdsCategory {
+			id: 1,
+			moddate: "now".to_string(),
+			title: title,
+			url: url,
+			icon: None
+		}
+	}
 }
 
 //Javascript can't cope with i64 so we use this for ID field to translate to string
