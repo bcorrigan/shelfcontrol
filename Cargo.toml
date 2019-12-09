@@ -3,6 +3,7 @@ name = "shelfcontrol"
 version = "0.1.0"
 authors = ["bcorrigan <b.j.corrigan@gmail.com>"]
 build = "src/build.rs"
+license="GPL-3.0-or-later"
 
 [dependencies]
 epub = "^1.2"
