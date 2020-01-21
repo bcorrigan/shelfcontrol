@@ -1,6 +1,6 @@
-@use search_result::OpdsPage;
-@use search_result::SearchResult;
-@use OpdsCategory;
+@use crate::search_result::OpdsPage;
+@use crate::search_result::SearchResult;
+@use crate::OpdsCategory;
 @(header: &OpdsPage, result: &Option<SearchResult>, navs: &Option<Vec<OpdsCategory>>)
 <?xml version="1.0" encoding="UTF-8"?>
   <feed xmlns:opds="http://opds-spec.org/2010/catalog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.w3.org/2005/Atom" xmlns:thr="http://purl.org/syndication/thread/1.0" xml:lang="en" xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:app="http://www.w3.org/2007/app" xmlns:dc="http://purl.org/dc/terms/" xmlns:dcterms="http://purl.org/dc/terms/">

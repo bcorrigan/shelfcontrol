@@ -13,8 +13,8 @@ use std::process;
 use std::time::SystemTime;
 use walkdir::WalkDir;
 
-use BookMetadata;
-use BookWriter;
+use crate::BookMetadata;
+use crate::BookWriter;
 
 pub fn scan_dirs(
 	dirs: Vec<String>,

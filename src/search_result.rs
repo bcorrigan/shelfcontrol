@@ -1,5 +1,6 @@
-use error::ClientError;
-use BookMetadata;
+use crate::BookMetadata;
+use crate::error::ClientError;
+//use BookMetadata;
 //Responsible for representing search results, serialising into variopus formats etc
 
 #[derive(Debug)]

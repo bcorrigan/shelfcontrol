@@ -1,17 +1,17 @@
-use ttvy::TantivyReader;
+use crate::ttvy::TantivyReader;
 
 use epub::doc::EpubDoc;
 
-use error::ClientError;
-use error::StoreError;
+use crate::error::ClientError;
+use crate::error::StoreError;
 use rouille::Response;
 use std::fmt;
 use std::fs::File;
 use std::io;
 use std::io::prelude::*;
 
-use search_result::OpdsPage;
-use OpdsCategory;
+use crate::search_result::OpdsPage;
+use crate::OpdsCategory;
 
 include!(concat!(env!("OUT_DIR"), "/templates.rs"));
 
