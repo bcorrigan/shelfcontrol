@@ -2,11 +2,11 @@
 #[cfg(test)]
 mod test {
 
-	use scanner;
+	use crate::scanner;
 	use std::fs;
 	use std::io::Error;
 	use std::{thread, time};
-	use ttvy;
+	use crate::ttvy;
 
 	#[test]
 	fn integration_test() -> Result<(), Error> {

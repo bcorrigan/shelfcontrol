@@ -1,5 +1,6 @@
-use error::ClientError;
-use BookMetadata;
+use crate::BookMetadata;
+use crate::error::ClientError;
+//use BookMetadata;
 //Responsible for representing search results, serialising into variopus formats etc
 
 #[derive(Debug)]
@@ -8,6 +9,14 @@ pub struct SearchResult {
 	pub start: usize,
 	pub query: String,
 	pub books: Vec<BookMetadata>,
+}
+
+#[derive(Debug)]
+pub struct OpdsPage {
+	pub id:String,
+	pub date:String,
+	pub title:String,
+	pub url:String,
 }
 
 impl SearchResult {

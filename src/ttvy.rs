@@ -14,12 +14,14 @@ use tantivy::schema::*;
 use tantivy::IndexWriter;
 use tantivy::{Index, IndexReader, ReloadPolicy};
 
+use futures::executor;
+
 use ammonia::{Builder, UrlRelative};
-use error::StoreError;
-use search_result::SearchResult;
+use crate::error::StoreError;
+use crate::search_result::SearchResult;
 use tantivy::query::QueryParser;
-use BookMetadata;
-use BookWriter;
+use crate::BookMetadata;
+use crate::BookWriter;
 
 pub struct TantivyWriter<'a> {
 	index_writer: IndexWriter,
@@ -170,13 +172,14 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 			Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),
 		}?;
 
-		match self.index_writer.garbage_collect_files() {
-			Ok(_) => Ok(()),
-			Err(_) => Err(Box::new(io::Error::new(
-				io::ErrorKind::Other,
-				"TantivyError - garbage collect failed",
-			))),
-		}
+			match executor::block_on(self.index_writer.garbage_collect_files()) {
+				Ok(_) => Ok(()),
+				Err(_) => Err(Box::new(io::Error::new(
+					io::ErrorKind::Other,
+					"TantivyError - garbage collect failed",
+				))),
+			}
+		
 	}
 }
 

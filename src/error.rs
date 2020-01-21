@@ -69,6 +69,10 @@ impl From<QueryParserError> for ClientError {
 				name: "Expected Integer".to_string(),
 				msg: "Search argument requires an integer.".to_string(),
 			},
+			ExpectedFloat(_) => ClientError {
+				name: "Expected float".to_string(),
+				msg: "Search argument requires a float.".to_string(),
+			},
 			AllButQueryForbidden => ClientError {
 				name: "All But query forbidden".to_string(),
 				msg: "Queries that only exclude (eg. \"-king\") are forbidden.".to_string(),

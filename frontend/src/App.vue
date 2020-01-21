@@ -251,7 +251,7 @@
       },
       zeroResult () {
         if(this.count==0) {
-          this.errorMsg='<h3>No results for \"<b>' + this.lastquery + '</b>\"</h3><p/>&nbsp;<p/>&nbsp;<p/>&nbsp;<p/>&nbsp;';
+          this.errorMsg='<h3>No results for "<b>' + this.lastquery + '</b>"</h3><p/>&nbsp;<p/>&nbsp;<p/>&nbsp;<p/>&nbsp;';
         }
       },
       download(book) {
