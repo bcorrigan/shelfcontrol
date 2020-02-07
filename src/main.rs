@@ -37,7 +37,6 @@ mod server;
 mod test;
 mod ttvy;
 
-
 //to embed resources use rust-embed or include_str
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -74,7 +73,7 @@ impl OpdsCategory {
 			moddate: "now".to_string(),
 			title: title,
 			url: url,
-			icon: None
+			icon: None,
 		}
 	}
 }
