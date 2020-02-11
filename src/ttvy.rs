@@ -1,17 +1,22 @@
 use std::error::Error;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use std::fs;
 use std::io;
 use std::path::Path;
 use std::process;
 
-use tantivy::collector::{Count, TopDocs};
+use tantivy::collector::{Collector, Count, SegmentCollector, TopDocs};
 use tantivy::directory::MmapDirectory;
 use tantivy::query::TermQuery;
 use tantivy::schema::*;
+use tantivy::DocId;
 use tantivy::IndexWriter;
+use tantivy::Score;
+use tantivy::SegmentLocalId;
+use tantivy::SegmentReader;
 use tantivy::{Index, IndexReader, ReloadPolicy};
 
 use futures::executor;
@@ -341,5 +346,55 @@ impl TantivyReader {
 		}
 
 		Some(tags)
+	}
+}
+
+//Reduce the search results to top categories with numbers of each
+pub struct TopCategories {
+	precision: usize, //1 means first letter, 2 means 2nd letter etc
+}
+
+impl TopCategories {
+	pub fn with_precision(precision: usize) -> TopCategories {
+		if precision < 1 {
+			panic!("Precision must be > 0");
+		}
+
+		TopCategories { precision }
+	}
+}
+
+impl Collector for TopCategories {
+	type Fruit = HashSet<(char, usize)>; //FIXME actually a hashmap I guess is better
+
+	type Child = TopCategoriesSegmentCollector;
+
+	fn for_segment(&self, segment_local_id: SegmentLocalId, reader: &SegmentReader) -> tantivy::Result<Self::Child> {
+		unimplemented!("A segment constructor I think?");
+	}
+
+	fn requires_scoring(&self) -> bool {
+		false
+	}
+
+	fn merge_fruits(&self, child_fruits: Vec<HashSet<(char, usize)>>) -> tantivy::Result<Self::Fruit> {
+		unimplemented!("Simply merge the hashsets via some util fn");
+	}
+}
+
+pub struct TopCategoriesSegmentCollector {
+	precision: usize,
+	fruit: HashSet<(char, usize)>,
+}
+
+impl SegmentCollector for TopCategoriesSegmentCollector {
+	type Fruit = HashSet<(char, usize)>;
+
+	fn collect(&mut self, doc: DocId, score: Score) {
+		unimplemented!("Grab each incoming doc here, extract field of interest, look at char at index precision, push to Vec?");
+	}
+
+	fn harvest(self) -> Self::Fruit {
+		unimplemented!("Return the fruit");
 	}
 }
