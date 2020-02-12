@@ -350,47 +350,74 @@ impl TantivyReader {
 }
 
 //Reduce the search results to top categories with numbers of each
-pub struct TopCategories {
-	precision: usize, //1 means first letter, 2 means 2nd letter etc
+pub struct AlphabeticalCategories {
+	char_position: usize, //1 means first letter, 2 means 2nd letter etc
+	category_field: Field,
 }
 
-impl TopCategories {
-	pub fn with_precision(precision: usize) -> TopCategories {
-		if precision < 1 {
-			panic!("Precision must be > 0");
+impl AlphabeticalCategories {
+	pub fn new(char_position: usize, category_field: Field) -> AlphabeticalCategories {
+		if char_position < 1 {
+			panic!("Position must be positive.");
 		}
 
-		TopCategories { precision }
+		AlphabeticalCategories {
+			char_position,
+			category_field,
+		}
 	}
 }
 
-impl Collector for TopCategories {
-	type Fruit = HashSet<(char, usize)>; //FIXME actually a hashmap I guess is better
+impl Collector for AlphabeticalCategories {
+	type Fruit = HashMap<char, usize>;
 
-	type Child = TopCategoriesSegmentCollector;
+	type Child = AlphabeticalCategoriesSegmentCollector;
 
-	fn for_segment(&self, segment_local_id: SegmentLocalId, reader: &SegmentReader) -> tantivy::Result<Self::Child> {
-		unimplemented!("A segment constructor I think?");
+	fn for_segment(&self, _: SegmentLocalId, _: &SegmentReader) -> tantivy::Result<Self::Child> {
+		Ok(AlphabeticalCategoriesSegmentCollector::new(self.char_position, self.category_field))
 	}
 
 	fn requires_scoring(&self) -> bool {
 		false
 	}
 
-	fn merge_fruits(&self, child_fruits: Vec<HashSet<(char, usize)>>) -> tantivy::Result<Self::Fruit> {
-		unimplemented!("Simply merge the hashsets via some util fn");
+	fn merge_fruits(&self, child_fruits: Vec<HashMap<char, usize>>) -> tantivy::Result<Self::Fruit> {
+		let mut merged: HashMap<char, usize> = HashMap::new();
+
+		for fruit in child_fruits {
+			for (letter, count) in fruit {
+				if merged.contains_key(&letter) {
+					merged.insert(letter, merged.get(&letter).unwrap() + count);
+				} else {
+					merged.insert(letter, count);
+				}
+			}
+		}
+
+		Ok(merged)
 	}
 }
 
-pub struct TopCategoriesSegmentCollector {
-	precision: usize,
+pub struct AlphabeticalCategoriesSegmentCollector {
+	char_position: usize,
+	category_field: Field,
 	fruit: HashSet<(char, usize)>,
 }
 
-impl SegmentCollector for TopCategoriesSegmentCollector {
-	type Fruit = HashSet<(char, usize)>;
+impl AlphabeticalCategoriesSegmentCollector {
+	pub fn new(char_position: usize, category_field: Field) -> AlphabeticalCategoriesSegmentCollector {
+		AlphabeticalCategoriesSegmentCollector {
+			char_position,
+			category_field,
+			fruit: HashSet::new(),
+		}
+	}
+}
 
-	fn collect(&mut self, doc: DocId, score: Score) {
+impl SegmentCollector for AlphabeticalCategoriesSegmentCollector {
+	type Fruit = HashMap<char, usize>;
+
+	fn collect(&mut self, doc: DocId, _: Score) {
 		unimplemented!("Grab each incoming doc here, extract field of interest, look at char at index precision, push to Vec?");
 	}
 
