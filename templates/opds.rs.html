@@ -22,12 +22,12 @@
 @if let Some(navs) = &navs {
       @for nav in navs {
             <entry>
-                  <title>&nav.title</title>
-                  <id>&nav.id</id>
+                  <title>@nav.title</title>
+                  <id>@nav.id</id>
                   <content type="text"></content>
-                  <link type="application/atom+xml;profile=opds-catalog;kind=navigation" href="&nav.url"/>
+                  <link type="application/atom+xml;profile=opds-catalog;kind=navigation" href="@nav.url"/>
                   @if let Some(icon) = &nav.icon { <link href="icon" type="image/png" rel="http://opds-spec.org/image/thumbnail"/> }
-                  <updated>&nav.moddate</updated>
+                  <updated>@nav.moddate</updated>
             </entry>
       }
 }
