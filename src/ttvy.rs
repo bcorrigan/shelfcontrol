@@ -423,6 +423,8 @@ impl SegmentCollector for AlphabeticalCategoriesSegmentCollector {
 	fn collect(&mut self, doc: DocId, _: Score) {
 		//segmentReader.get_store_reader().get(docId) => slow (returns LZ4 block to decompress!) 
 		//If it is a facet - segmentReader.facet_reader() then facet_reader.facet_ords() & facet_from_ords()
+		let document = self.store_reader.get(doc).unwrap();
+		let field_text = document.get_first(self.category_field).unwrap().text().unwrap();
 		unimplemented!("Grab each incoming doc here, extract field of interest, look at char at index precision, note in fruit.");
 	}
 
