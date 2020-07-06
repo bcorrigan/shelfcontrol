@@ -12,6 +12,7 @@ use tantivy::collector::{Collector, Count, SegmentCollector, TopDocs};
 use tantivy::directory::MmapDirectory;
 use tantivy::query::TermQuery;
 use tantivy::schema::*;
+use tantivy::store::StoreReader;
 use tantivy::DocId;
 use tantivy::IndexWriter;
 use tantivy::Score;
@@ -373,8 +374,8 @@ impl Collector for AlphabeticalCategories {
 
 	type Child = AlphabeticalCategoriesSegmentCollector;
 
-	fn for_segment(&self, _: SegmentLocalId, _: &SegmentReader) -> tantivy::Result<Self::Child> {
-		Ok(AlphabeticalCategoriesSegmentCollector::new(self.char_position, self.category_field))
+	fn for_segment(&self, _: SegmentLocalId, segment_reader: &SegmentReader) -> tantivy::Result<Self::Child> {
+		Ok(AlphabeticalCategoriesSegmentCollector::new(self.char_position, self.category_field, segment_reader))
 	}
 
 	fn requires_scoring(&self) -> bool {
@@ -402,14 +403,16 @@ pub struct AlphabeticalCategoriesSegmentCollector {
 	char_position: usize,
 	category_field: Field,
 	fruit: HashSet<(char, usize)>,
+	store_reader: StoreReader,
 }
 
 impl AlphabeticalCategoriesSegmentCollector {
-	pub fn new(char_position: usize, category_field: Field) -> AlphabeticalCategoriesSegmentCollector {
+	pub fn new(char_position: usize, category_field: Field, segment_reader: &SegmentReader) -> AlphabeticalCategoriesSegmentCollector {
 		AlphabeticalCategoriesSegmentCollector {
 			char_position,
 			category_field,
 			fruit: HashSet::new(),
+			store_reader: segment_reader.get_store_reader(),
 		}
 	}
 }
@@ -418,7 +421,9 @@ impl SegmentCollector for AlphabeticalCategoriesSegmentCollector {
 	type Fruit = HashMap<char, usize>;
 
 	fn collect(&mut self, doc: DocId, _: Score) {
-		unimplemented!("Grab each incoming doc here, extract field of interest, look at char at index precision, push to Vec?");
+		//segmentReader.get_store_reader().get(docId) => slow (returns LZ4 block to decompress!) 
+		//If it is a facet - segmentReader.facet_reader() then facet_reader.facet_ords() & facet_from_ords()
+		unimplemented!("Grab each incoming doc here, extract field of interest, look at char at index precision, note in fruit.");
 	}
 
 	fn harvest(self) -> Self::Fruit {
