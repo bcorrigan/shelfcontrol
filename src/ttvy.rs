@@ -402,7 +402,7 @@ impl Collector for AlphabeticalCategories {
 pub struct AlphabeticalCategoriesSegmentCollector {
 	char_position: usize,
 	category_field: Field,
-	fruit: HashSet<(char, usize)>,
+	fruit: HashMap<char, usize>,
 	store_reader: StoreReader,
 }
 
@@ -411,7 +411,7 @@ impl AlphabeticalCategoriesSegmentCollector {
 		AlphabeticalCategoriesSegmentCollector {
 			char_position,
 			category_field,
-			fruit: HashSet::new(),
+			fruit: HashMap::new(),
 			store_reader: segment_reader.get_store_reader(),
 		}
 	}
@@ -425,10 +425,11 @@ impl SegmentCollector for AlphabeticalCategoriesSegmentCollector {
 		//If it is a facet - segmentReader.facet_reader() then facet_reader.facet_ords() & facet_from_ords()
 		let document = self.store_reader.get(doc).unwrap();
 		let field_text = document.get_first(self.category_field).unwrap().text().unwrap();
-		unimplemented!("Grab each incoming doc here, extract field of interest, look at char at index precision, note in fruit.");
+		let char = field_text.chars().nth(self.char_position).unwrap();
+		self.fruit.insert(char, self.fruit.get(&char).unwrap_or(&0) + 1);
 	}
 
 	fn harvest(self) -> Self::Fruit {
-		unimplemented!("Return the fruit");
+		self.fruit
 	}
 }

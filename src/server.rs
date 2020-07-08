@@ -51,7 +51,7 @@ impl Server {
 	pub fn serve(self) -> Result<(), tantivy::TantivyError> {
 		println!("Starting server on localhost:8000");
 
-		rouille::start_server("192.168.1.92:8000", move |request| {
+		rouille::start_server("localhost:8000", move |request| {
 			rouille::log(&request, io::stdout(), || {
 				router!(request,
 					(GET) (/api/search) => {

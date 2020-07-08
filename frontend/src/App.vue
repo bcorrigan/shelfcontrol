@@ -1,9 +1,23 @@
 <template>
   <v-app id="shelfcontrol">
+    <v-app-bar color="amber darken-1" clipped-left app>
+      <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
+      <span class="title ml-3 mr-5">Shelf&nbsp;<span class="font-weight-light">Control</span></span>
+      <v-text-field
+      v-model="searchtext"
+        solo-inverted
+        flat
+        hide-details
+        label="Search"
+        @change="dosearch"
+        prepend-inner-icon="search"
+      ></v-text-field>
+      <v-spacer></v-spacer>
+    </v-app-bar>
     <v-navigation-drawer
       v-model="drawer"
-      fixed
       class="grey lighten-2"
+      clipped
       app
     >
       <v-spacer class="v-spacer">&nbsp;</v-spacer>
@@ -35,37 +49,23 @@
             dark
             class="my-3"
           ></v-divider>
-          <v-list-tile
+          <v-list-item
             v-else
             :key="i"
           >
-            <v-list-tile-action>
+            <v-list-item-action>
               <v-icon>{{ item.icon }}</v-icon>
-            </v-list-tile-action>
-            <v-list-tile-content>
-              <v-list-tile-title class="dark-grey--text">
+            </v-list-item-action>
+            <v-list-item-content>
+              <v-list-item-title class="dark-grey--text">
                 {{ item.text }}
-              </v-list-tile-title>
-            </v-list-tile-content>
-          </v-list-tile>
+              </v-list-item-title>
+            </v-list-item-content>
+          </v-list-item>
         </template>
       </v-list>
     </v-navigation-drawer>
-    <v-toolbar color="amber darken-1" app clipped-left>
-      <v-toolbar-side-icon @click="drawer = !drawer"></v-toolbar-side-icon>
-      <span class="title ml-3 mr-5">Shelf&nbsp;<span class="font-weight-light">Control</span></span>
-      <v-text-field
-      v-model="searchtext"
-        solo-inverted
-        flat
-        hide-details
-        label="Search"
-        @change="dosearch"
-        prepend-inner-icon="search"
-      ></v-text-field>
-      <v-spacer></v-spacer>
-    </v-toolbar>
-    <v-content>
+    <v-main>
       <v-container fluid fill-height class="grey lighten-4">
         <v-layout align-center>
           <v-flex>
@@ -88,16 +88,8 @@
                 height="400"
                 contain="true"
                 style="cursor: pointer"
-                :src="'http://' + host + ':8000/img/' + book.id"
+                :src="'http://localhost:8000/img/' + book.id"
                 @click="coverid = book.id;  coverdialog = true">
-
-                <!--<v-container fill-height fluid>
-                  <v-layout fill-height>
-                    <v-flex xs12 align-end flexbox>
-                      <span class="headline">Top 10 Australian beaches</span>
-                    </v-flex>
-                  </v-layout>
-                </v-container>-->
               </v-img>
                   </v-flex>
                 <v-flex xs7 d-flex>
@@ -113,7 +105,7 @@
                     >
                     {{book.creator}}
                   </span><br>
-                  <span v-html="book.description"></span>
+                  <div v-html="book.description" class="text-wrap"></div>
                   <br><br>
                   <h4><span
                         style="cursor: pointer"
@@ -168,8 +160,6 @@
         id="cdialog"
         v-model="coverdialog"
         @keydown.esc="coverdialog = false"
-        full-width
-        lazy
       >
         <v-img
           class="white--text"
@@ -181,7 +171,7 @@
         >
         </v-img>
       </v-dialog>
-    </v-content>
+    </v-main>
   </v-app>
 </template>
 
@@ -207,7 +197,7 @@
       lastquery: null,
       coverdialog: null,
       errorMsg: null,
-      host:null
+      host:"localhost"
     }),
     props: {
       source: String
