@@ -40,7 +40,7 @@
               </v-subheader>
             </v-flex>
             <!--<v-flex xs6 class="text-xs-right">
-              <v-btn small flat>edit</v-btn>
+              <v-btn small>edit</v-btn>
             </v-flex>-->
           </v-layout>
           <v-divider
@@ -80,13 +80,13 @@
             {{ position + 1 }}-{{ Math.min(position+20,count) }} of {{ count }} results for "{{ lastquery }}"
           </v-subheader>
           <span v-for="(book, index) in books" :key="book.id">
-            <v-card>
+            <v-card style="word-break: normal">
               <v-layout align-center>
                 <v-flex xs5>
               <v-img
                 class="white--text"
                 height="400"
-                contain="true"
+                contain
                 style="cursor: pointer"
                 :src="'http://localhost:8000/img/' + book.id"
                 @click="coverid = book.id;  coverdialog = true">
@@ -95,7 +95,7 @@
                 <v-flex xs7 d-flex>
                   <v-layout column>
                     <v-flex xs12>
-              <v-card-title>
+              <v-card-title style="word-break: normal">
                 <div>
                     <h2><span class="grey--text text--darken-3">{{ book.title }}</span></h2>
                     <span
@@ -105,7 +105,7 @@
                     >
                     {{book.creator}}
                   </span><br>
-                  <div v-html="book.description" class="text-wrap"></div>
+                  <div v-html="book.description" class="text-body-1"></div>
                   <br><br>
                   <h4><span
                         style="cursor: pointer"
@@ -119,7 +119,7 @@
                                   <span v-for="tag in book.subject" :key="tag">
                                     <v-btn
                                       small
-                                      round
+                                      rounded
                                       color="grey lighten-2"
                                       @click="clicksearch('tags:&quot;' + tag + '&quot;')"
                                       class="text-lowercase"
@@ -132,7 +132,7 @@
                               </v-layout>
                                 <v-tooltip bottom>
                                   <template v-slot:activator="{ on }">
-                                    <v-btn flat color="orange" v-on="on" @click="download(book)">Download</v-btn>
+                                    <v-btn text color="orange" v-on="on" @click="download(book)">Download</v-btn>
                                   </template>
                                   <span>{{(book.filesize / 1048576).toFixed(2)}} Mb</span>
                                 </v-tooltip>
@@ -163,7 +163,6 @@
       >
         <v-img
           class="white--text"
-          contain="false"
           :src="'http://' + host + ':8000/img/' + coverid"
           @click="coverdialog=false"
           style="cursor: pointer"
