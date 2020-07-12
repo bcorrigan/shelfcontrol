@@ -121,7 +121,7 @@
                                       small
                                       rounded
                                       color="grey lighten-2"
-                                      @click="clicksearch('tags:&quot;' + tag + '&quot;')"
+                                      @click="clicksearch('tags:&quot;/' + tag + '&quot;')"
                                       class="text-lowercase"
                                       >
                                         {{ tag }}

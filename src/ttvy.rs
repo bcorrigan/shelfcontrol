@@ -244,7 +244,7 @@ impl TantivyReader {
 		let top_collector = TopDocs::with_limit(start + limit);
 		let count_collector = Count;
 		let docs = searcher.search(tquery, &(top_collector, count_collector))?;
-		let count = docs.0.len();
+		let count = docs.1;
 
 		let mut books = Vec::new();
 
