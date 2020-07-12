@@ -51,7 +51,7 @@ impl Server {
 	pub fn serve(self) -> Result<(), tantivy::TantivyError> {
 		println!("Starting server on localhost:8000");
 
-		rouille::start_server("192.168.1.92:8000", move |request| {
+		rouille::start_server("localhost:8000", move |request| {
 			rouille::log(&request, io::stdout(), || {
 				router!(request,
 					(GET) (/api/search) => {
@@ -104,7 +104,7 @@ impl Server {
 							None => Response::empty_404(),
 						}
 					},
-                    (GET) (/opds) => {
+					(GET) (/opds) => {
 						//in this case we return only root nav entries:
 						//Authors, Tags, Year of Publication, Author, Titles
 						let navs = vec!(
@@ -113,13 +113,14 @@ impl Server {
 							OpdsCategory::new("Year of Publication".to_string(), "".to_string()),
 							OpdsCategory::new("Titles".to_string(), "".to_string()),
 						);
-                        let mut buf = Vec::new();
-                        match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"now".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &None, &Some(navs)) {
+
+						let mut buf = Vec::new();
+						match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"now".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &None, &Some(navs)) {
 							Ok(_) => return Response::from_data("application/xml", buf),
 							Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
 						}
 
-                    },
+					},
 					(GET) (/img/{id: i64}) => {
 						return match self.reader.get_book(id) {
 							Some(doc) => {

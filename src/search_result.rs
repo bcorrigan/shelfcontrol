@@ -1,5 +1,5 @@
-use crate::BookMetadata;
 use crate::error::ClientError;
+use crate::BookMetadata;
 //use BookMetadata;
 //Responsible for representing search results, serialising into variopus formats etc
 
@@ -13,10 +13,10 @@ pub struct SearchResult {
 
 #[derive(Debug)]
 pub struct OpdsPage {
-	pub id:String,
-	pub date:String,
-	pub title:String,
-	pub url:String,
+	pub id: String,
+	pub date: String,
+	pub title: String,
+	pub url: String,
 }
 
 impl SearchResult {

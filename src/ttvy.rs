@@ -1,27 +1,33 @@
 use std::error::Error;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use std::fs;
 use std::io;
 use std::path::Path;
 use std::process;
 
-use tantivy::collector::{Count, TopDocs};
+use tantivy::collector::{Collector, Count, SegmentCollector, TopDocs};
 use tantivy::directory::MmapDirectory;
 use tantivy::query::TermQuery;
 use tantivy::schema::*;
+use tantivy::store::StoreReader;
+use tantivy::DocId;
 use tantivy::IndexWriter;
+use tantivy::Score;
+use tantivy::SegmentLocalId;
+use tantivy::SegmentReader;
 use tantivy::{Index, IndexReader, ReloadPolicy};
 
 use futures::executor;
 
-use ammonia::{Builder, UrlRelative};
 use crate::error::StoreError;
 use crate::search_result::SearchResult;
-use tantivy::query::QueryParser;
 use crate::BookMetadata;
 use crate::BookWriter;
+use ammonia::{Builder, UrlRelative};
+use tantivy::query::QueryParser;
 
 pub struct TantivyWriter<'a> {
 	index_writer: IndexWriter,
@@ -172,14 +178,13 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 			Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),
 		}?;
 
-			match executor::block_on(self.index_writer.garbage_collect_files()) {
-				Ok(_) => Ok(()),
-				Err(_) => Err(Box::new(io::Error::new(
-					io::ErrorKind::Other,
-					"TantivyError - garbage collect failed",
-				))),
-			}
-		
+		match executor::block_on(self.index_writer.garbage_collect_files()) {
+			Ok(_) => Ok(()),
+			Err(_) => Err(Box::new(io::Error::new(
+				io::ErrorKind::Other,
+				"TantivyError - garbage collect failed",
+			))),
+		}
 	}
 }
 
@@ -239,7 +244,7 @@ impl TantivyReader {
 		let top_collector = TopDocs::with_limit(start + limit);
 		let count_collector = Count;
 		let docs = searcher.search(tquery, &(top_collector, count_collector))?;
-		let count = docs.0.len();
+		let count = docs.1;
 
 		let mut books = Vec::new();
 
@@ -342,5 +347,89 @@ impl TantivyReader {
 		}
 
 		Some(tags)
+	}
+}
+
+//Reduce the search results to top categories with numbers of each
+pub struct AlphabeticalCategories {
+	char_position: usize, //1 means first letter, 2 means 2nd letter etc
+	category_field: Field,
+}
+
+impl AlphabeticalCategories {
+	pub fn new(char_position: usize, category_field: Field) -> AlphabeticalCategories {
+		if char_position < 1 {
+			panic!("Position must be positive.");
+		}
+
+		AlphabeticalCategories {
+			char_position,
+			category_field,
+		}
+	}
+}
+
+impl Collector for AlphabeticalCategories {
+	type Fruit = HashMap<char, usize>;
+
+	type Child = AlphabeticalCategoriesSegmentCollector;
+
+	fn for_segment(&self, _: SegmentLocalId, segment_reader: &SegmentReader) -> tantivy::Result<Self::Child> {
+		Ok(AlphabeticalCategoriesSegmentCollector::new(self.char_position, self.category_field, segment_reader))
+	}
+
+	fn requires_scoring(&self) -> bool {
+		false
+	}
+
+	fn merge_fruits(&self, child_fruits: Vec<HashMap<char, usize>>) -> tantivy::Result<Self::Fruit> {
+		let mut merged: HashMap<char, usize> = HashMap::new();
+
+		for fruit in child_fruits {
+			for (letter, count) in fruit {
+				if merged.contains_key(&letter) {
+					merged.insert(letter, merged.get(&letter).unwrap() + count);
+				} else {
+					merged.insert(letter, count);
+				}
+			}
+		}
+
+		Ok(merged)
+	}
+}
+
+pub struct AlphabeticalCategoriesSegmentCollector {
+	char_position: usize,
+	category_field: Field,
+	fruit: HashMap<char, usize>,
+	store_reader: StoreReader,
+}
+
+impl AlphabeticalCategoriesSegmentCollector {
+	pub fn new(char_position: usize, category_field: Field, segment_reader: &SegmentReader) -> AlphabeticalCategoriesSegmentCollector {
+		AlphabeticalCategoriesSegmentCollector {
+			char_position,
+			category_field,
+			fruit: HashMap::new(),
+			store_reader: segment_reader.get_store_reader(),
+		}
+	}
+}
+
+impl SegmentCollector for AlphabeticalCategoriesSegmentCollector {
+	type Fruit = HashMap<char, usize>;
+
+	fn collect(&mut self, doc: DocId, _: Score) {
+		//segmentReader.get_store_reader().get(docId) => slow (returns LZ4 block to decompress!) 
+		//If it is a facet - segmentReader.facet_reader() then facet_reader.facet_ords() & facet_from_ords()
+		let document = self.store_reader.get(doc).unwrap();
+		let field_text = document.get_first(self.category_field).unwrap().text().unwrap();
+		let char = field_text.chars().nth(self.char_position).unwrap();
+		self.fruit.insert(char, self.fruit.get(&char).unwrap_or(&0) + 1);
+	}
+
+	fn harvest(self) -> Self::Fruit {
+		self.fruit
 	}
 }
