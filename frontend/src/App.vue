@@ -196,6 +196,7 @@
       lastquery: null,
       coverdialog: null,
       errorMsg: null,
+      searchtext: null,
       host:"localhost"
     }),
     props: {
