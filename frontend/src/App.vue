@@ -9,6 +9,7 @@
         solo-inverted
         flat
         hide-details
+        clearable="true"
         label="Search"
         @change="dosearch()"
         @keydown.enter="$event.target.blur()"
