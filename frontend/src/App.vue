@@ -9,6 +9,7 @@
         solo-inverted
         flat
         hide-details
+        clearable="true"
         label="Search"
         @change="dosearch()"
         @keydown.enter="$event.target.blur()"
@@ -85,6 +86,7 @@
             <v-card style="word-break: normal">
               <v-row no-gutters>
                 <v-col  cols="12" sm="6">
+              <v-flex class="py-8" >
               <v-img
                 class="white--text"
                 height="400"
@@ -93,6 +95,7 @@
                 :src="'http://192.168.1.112:8080/img/' + book.id"
                 @click="coverid = book.id;  coverdialog = true">
               </v-img>
+              </v-flex>
               </v-col>
               <v-col cols="12" sm="6">
               <v-card-title style="word-break: normal">
