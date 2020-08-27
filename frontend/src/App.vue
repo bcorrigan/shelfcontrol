@@ -4,12 +4,14 @@
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
       <span class="title ml-3 mr-5">Shelf&nbsp;<span class="font-weight-light">Control</span></span>
       <v-text-field
+        id="searchField"
       v-model="searchtext"
         solo-inverted
         flat
         hide-details
         label="Search"
-        @change="dosearch"
+        @change="dosearch()"
+        @keydown.enter="$event.target.blur()"
         prepend-inner-icon="search"
       ></v-text-field>
       <v-spacer></v-spacer>
@@ -81,20 +83,18 @@
           </v-subheader>
           <span v-for="(book, index) in books" :key="book.id">
             <v-card style="word-break: normal">
-              <v-layout align-center>
-                <v-flex xs5>
+              <v-row no-gutters>
+                <v-col  cols="12" sm="6">
               <v-img
                 class="white--text"
                 height="400"
                 contain
                 style="cursor: pointer"
-                :src="'http://localhost:8000/img/' + book.id"
+                :src="'http://192.168.1.112:8080/img/' + book.id"
                 @click="coverid = book.id;  coverdialog = true">
               </v-img>
-                  </v-flex>
-                <v-flex xs7 d-flex>
-                  <v-layout column>
-                    <v-flex xs12>
+              </v-col>
+              <v-col cols="12" sm="6">
               <v-card-title style="word-break: normal">
                 <div>
                     <h2><span class="grey--text text--darken-3">{{ book.title }}</span></h2>
@@ -113,7 +113,6 @@
                         class="grey--text text--darken-3">{{book.publisher}}</span></h4>
                 </div>
               </v-card-title>
-                      </v-flex>
                               <v-card-actions>
                                 <v-layout row wrap justify-left>
                                   <span v-for="tag in book.subject" :key="tag">
@@ -137,9 +136,8 @@
                                   <span>{{(book.filesize / 1048576).toFixed(2)}} Mb</span>
                                 </v-tooltip>
                               </v-card-actions>
-                    </v-layout>
-                  </v-flex>
-                </v-layout>
+                 </v-col>
+                </v-row>
             </v-card>
               <v-divider
                 v-if="index + 1 < books.length"
@@ -163,7 +161,7 @@
       >
         <v-img
           class="white--text"
-          :src="'http://' + host + ':8000/img/' + coverid"
+          :src="'http://' + host + ':8080/img/' + coverid"
           @click="coverdialog=false"
           style="cursor: pointer"
           v-if="coverdialog"
@@ -203,10 +201,10 @@
       source: String
     },
     mounted () {
-      this.$axios
-        .get('http://' + this.host + ':8000/api/search?query=tolkien&limit=20')
-        .then(response => (this.books = response.data.books , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position));
       this.host = window.location.hostname;
+      this.$axios
+        .get('http://' + this.host + ':8080/api/search?query=*&limit=20')
+        .then(response => (this.books = response.data.books , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position));
     },
     methods: {
       dosearchof (param) {
@@ -214,7 +212,7 @@
         this.errorMsg=null;
         window.scrollTo(0,0);
         this.$axios
-        .get('http://' + this.host + ':8000/api/search?query=' + param + '&limit=20&start='+ ((this.page-1)*20))
+        .get('http://' + this.host + ':8080/api/search?query=' + param + '&limit=20&start='+ ((this.page-1)*20))
         .then(response =>
           (this.books = response.data.books,
           this.count = response.data.count,
@@ -245,7 +243,7 @@
         }
       },
       download(book) {
-        this.$axios.get("http://" + this.host + ":8000/api/book/" + book.id,
+        this.$axios.get("http://" + this.host + ":8080/api/book/" + book.id,
         {
             responseType: 'arraybuffer',
             headers: {
