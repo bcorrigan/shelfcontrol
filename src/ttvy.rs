@@ -248,15 +248,13 @@ impl TantivyReader {
 
 		let mut books = Vec::new();
 
-		for (i, doc_addr) in docs.0.iter().enumerate() {
-			if (i + 1) > start {
-				let retrieved = match searcher.doc(doc_addr.1) {
-					Ok(doc) => doc,
-					Err(_) => continue,
-				};
+		for doc_addr in docs.0.iter().skip(start) {
+			let retrieved = match searcher.doc(doc_addr.1) {
+				Ok(doc) => doc,
+				Err(_) => continue,
+			};
 
-				books.push(self.to_bm(&retrieved, &searcher.schema()));
-			}
+			books.push(self.to_bm(&retrieved, &searcher.schema()));
 		}
 
 		Ok(SearchResult {
