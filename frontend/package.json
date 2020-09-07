@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "axios": "^0.19.0",
+    "datejs": "^1.0.0-rc3",
     "vue": "^2.6.10",
     "vuetify": "^2.3.4",
     "webpack": "^4.41.2"
