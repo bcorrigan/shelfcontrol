@@ -48,6 +48,7 @@ pub struct BookMetadata {
 	publisher: Option<String>,
 	creator: Option<String>,
 	subject: Option<Vec<String>>, //aka tags
+	#[serde(skip)]
 	file: String,
 	filesize: i64,
 	modtime: i64,
