@@ -23,7 +23,7 @@ use tantivy::{Index, IndexReader, ReloadPolicy};
 use futures::executor;
 
 use crate::error::StoreError;
-use crate::search_result::SearchResult;
+use crate::search_result::{SearchResult, CategorySearchResult};
 use crate::BookMetadata;
 use crate::BookWriter;
 use ammonia::{Builder, UrlRelative};
@@ -246,7 +246,7 @@ impl TantivyReader {
 		let docs = searcher.search(tquery, &(top_collector, count_collector))?;
 		let count = docs.1;
 
-		let mut books = Vec::new();
+		let mut books = Vec::new(); //0 {}[]
 
 		for doc_addr in docs.0.iter().skip(start) {
 			let retrieved = match searcher.doc(doc_addr.1) {
@@ -263,6 +263,19 @@ impl TantivyReader {
 			query: query.to_string(),
 			books,
 		})
+	}
+
+	pub fn categorise(&self, field: &str, query: &str, prefix: &str) -> Result<CategorySearchResult, StoreError> {
+		let searcher = self.reader.searcher();
+		let fld = TantivyReader::get_field(searcher.schema(), field)?;
+		let cat_collector = AlphabeticalCategories::new(0, fld);
+		let query = &self.query_parser.parse_query(&format!("startsWith:{}", &prefix).to_string())?;
+
+		let cats = searcher.search(query, &cat_collector)?;
+
+
+
+		unimplemented!()
 	}
 
 	pub fn get_book(&self, id: i64) -> Option<BookMetadata> {
@@ -383,7 +396,7 @@ impl Collector for AlphabeticalCategories {
 	fn merge_fruits(&self, child_fruits: Vec<HashMap<char, usize>>) -> tantivy::Result<Self::Fruit> {
 		let mut merged: HashMap<char, usize> = HashMap::new();
 
-		for fruit in child_fruits {
+		for fruit in child_fruits { 
 			for (letter, count) in fruit {
 				if merged.contains_key(&letter) {
 					merged.insert(letter, merged.get(&letter).unwrap() + count);

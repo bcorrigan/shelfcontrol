@@ -121,6 +121,9 @@ impl Server {
 						}
 
 					},
+					(GET) (/opds/tags) => {
+						unimplemented!()
+					},
 					(GET) (/img/{id: i64}) => {
 						return match self.reader.get_book(id) {
 							Some(doc) => {
