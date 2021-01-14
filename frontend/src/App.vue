@@ -9,7 +9,7 @@
         solo-inverted
         flat
         hide-details
-        clearable="true"
+        clearable
         label="Search"
         @change="dosearch()"
         @keydown.enter="$event.target.blur()"
@@ -92,7 +92,7 @@
                 height="400"
                 contain
                 style="cursor: pointer"
-                :src="'http://192.168.1.112:8080/img/' + book.id"
+                :src="'http://localhost:8080/img/' + book.id"
                 @click="coverid = book.id;  coverdialog = true">
               </v-img>
               </v-flex>
