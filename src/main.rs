@@ -71,7 +71,7 @@ impl OpdsCategory {
 	fn new(title: String, url: String) -> OpdsCategory {
 		OpdsCategory {
 			id: 1,
-			moddate: "now".to_string(),
+			moddate: "2021-01-21T10:56:30+01:00".to_string(),
 			title: title,
 			url: url,
 			icon: None,

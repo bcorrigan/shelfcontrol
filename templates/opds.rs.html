@@ -10,13 +10,13 @@
     <updated>@header.date</updated>
 
     <link rel="start" title="Home"
-          href="@header.url"
+          href="/opds"
           type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
     <link rel="self"
-          href="@header.url"
+          href="/opds"
           type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
     <link rel="search" title="Search"
-          href="@header.url?f=atom&amp;action=searchform"
+          href="/opds/search?query=@{searchTerms@}"
           type="application/opensearchdescription+xml"/>
 
 @if let Some(navs) = &navs {

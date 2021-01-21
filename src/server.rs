@@ -115,7 +115,7 @@ impl Server {
 						);
 
 						let mut buf = Vec::new();
-						match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"now".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &None, &Some(navs)) {
+						match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"2021-01-21T10:56:30+01:00".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &None, &Some(navs)) { 
 							Ok(_) => return Response::from_data("application/xml", buf),
 							Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
 						}
