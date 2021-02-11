@@ -9,7 +9,7 @@
         solo-inverted
         flat
         hide-details
-        clearable="true"
+        clearable
         label="Search"
         @change="dosearch()"
         @keydown.enter="$event.target.blur()"
@@ -92,7 +92,7 @@
                 height="400"
                 contain
                 style="cursor: pointer"
-                :src="'http://192.168.1.112:8080/img/' + book.id"
+                :src="'http://localhost:8080/img/' + book.id"
                 @click="coverid = book.id;  coverdialog = true">
               </v-img>
               </v-flex>
@@ -110,10 +110,10 @@
                   </span><br>
                   <div v-html="book.description" class="text-body-1"></div>
                   <br><br>
-                  <h4><span
+                  <h5>Published <span v-if="book.moddate"><b>{{new Date(Date.parse(book.moddate)).toLocaleDateString()}}</b></span><span v-if="book.publisher"> by <b><span
                         style="cursor: pointer"
                         @click="clicksearch('publisher:&quot;' + book.publisher + '&quot;')"
-                        class="grey--text text--darken-3">{{book.publisher}}</span></h4>
+                        class="grey--text text--darken-3">{{book.publisher}}</span></b></span></h5>
                 </div>
               </v-card-title>
                               <v-card-actions>

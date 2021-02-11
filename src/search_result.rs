@@ -12,6 +12,18 @@ pub struct SearchResult {
 }
 
 #[derive(Debug)]
+pub struct CategorySearchResult {
+	pub count: usize,
+	pub categories: Vec<Category>,
+}
+
+#[derive(Debug)]
+pub struct Category {
+	pub prefix: String,
+	pub count: usize,
+}
+
+#[derive(Debug)]
 pub struct OpdsPage {
 	pub id: String,
 	pub date: String,
