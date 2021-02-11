@@ -73,6 +73,10 @@ impl From<QueryParserError> for ClientError {
 				name: "Expected float".to_string(),
 				msg: "Search argument requires a float.".to_string(),
 			},
+			ExpectedBase64(_) => ClientError {
+				name: "Expected base64".to_string(),
+				msg: "Search argument requires a base64.".to_string(),
+			},
 			AllButQueryForbidden => ClientError {
 				name: "All But query forbidden".to_string(),
 				msg: "Queries that only exclude (eg. \"-king\") are forbidden.".to_string(),

@@ -108,8 +108,8 @@ impl Server {
 						//in this case we return only root nav entries:
 						//Authors, Tags, Year of Publication, Author, Titles
 						let navs = vec!(
-							OpdsCategory::new("Authors".to_string(), "".to_string()),
-							OpdsCategory::new("Tags".to_string(), "".to_string()),
+							OpdsCategory::new("Authors".to_string(), "/opds/authors".to_string()),
+							OpdsCategory::new("Tags".to_string(), "/opds/tags".to_string()),
 							OpdsCategory::new("Year of Publication".to_string(), "".to_string()),
 							OpdsCategory::new("Titles".to_string(), "".to_string()),
 						);
@@ -120,6 +120,17 @@ impl Server {
 							Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
 						}
 
+					},
+					(GET) (/opds/authors) => {
+						let cat_param = &request.get_param("categorise");
+						let cat_str = match cat_param {
+							Some(cat) => cat,
+							None => "*"
+						}.trim();
+
+						//call categorise
+
+						Response::empty_404()
 					},
 					(GET) (/opds/tags) => {
 						unimplemented!()

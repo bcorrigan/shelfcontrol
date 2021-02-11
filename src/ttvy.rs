@@ -337,14 +337,12 @@ impl TantivyReader {
 	}
 
 	fn get_doc_i64(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> i64 {
-		doc.get_first(schema.get_field(field).unwrap()).unwrap().i64_value()
+		doc.get_first(schema.get_field(field).unwrap()).unwrap().i64_value().unwrap()
 	}
 
 	fn get_tags(&self, _field: &str, doc: &tantivy::Document) -> Option<Vec<String>> {
-		let vals: Vec<&tantivy::schema::Value> = doc.get_all(self.tags_field);
-		if vals.is_empty() {
-			return None;
-		}
+		let vals = doc.get_all(self.tags_field);
+
 		let mut tags = Vec::new();
 
 		for v in vals {
@@ -355,6 +353,10 @@ impl TantivyReader {
 				}
 				.to_string(),
 			)
+		}
+
+		if tags.len() == 0 {
+			return None;
 		}
 
 		Some(tags)
@@ -423,7 +425,7 @@ impl AlphabeticalCategoriesSegmentCollector {
 			char_position,
 			category_field,
 			fruit: HashMap::new(),
-			store_reader: segment_reader.get_store_reader(),
+			store_reader: segment_reader.get_store_reader().unwrap(),
 		}
 	}
 }

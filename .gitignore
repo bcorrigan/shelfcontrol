@@ -33,3 +33,4 @@ shelfcontrol.iml
 test_server
 target
 test/library/*
+db
