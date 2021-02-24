@@ -1,7 +1,7 @@
 use chrono::{DateTime, Local};
 use epub::doc::EpubDoc;
 use itertools::Itertools;
-
+use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs;
@@ -55,6 +55,7 @@ pub fn scan_dirs(
 	let mut processed: u64 = 0;
 	let mut batch_start = SystemTime::now();
 	let scan_start = SystemTime::now();
+	let mut book_batch = vec![];
 
 	for dir in &dirs {
 		let walker = WalkDir::new(&dir).into_iter();
@@ -62,6 +63,10 @@ pub fn scan_dirs(
 			match entry {
 				Ok(l) => {
 					if l.path().display().to_string().ends_with(".epub") && l.file_type().is_file() {
+						book_batch.push(l.path().display().to_string());
+
+
+
 						match parse_epub(&l.path().display().to_string(), use_coverdir, coverdir) {
 							Ok(bm) => {
 								if seen_bookids.insert(bm.id) {

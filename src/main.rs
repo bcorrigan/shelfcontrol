@@ -3,6 +3,7 @@
 extern crate clap;
 extern crate ammonia;
 extern crate chrono;
+extern crate rayon;
 extern crate epub;
 extern crate tantivy;
 extern crate walkdir;
