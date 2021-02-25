@@ -65,26 +65,30 @@ pub fn scan_dirs(
 					if l.path().display().to_string().ends_with(".epub") && l.file_type().is_file() {
 						book_batch.push(l.path().display().to_string());
 
-
-
-						match parse_epub(&l.path().display().to_string(), use_coverdir, coverdir) {
-							Ok(bm) => {
-								if seen_bookids.insert(bm.id) {
-									books.push(bm);
-									wrote += 1;
-								} else {
-									println!("DUPLICATE: {}", &l.path().display());
-								}
-							}
-							Err(err) => eprintln!("Error with {}: {:?}", &l.path().display(), err),
-						}
-
 						processed += 1;
 
-						if processed % 1000 == 0 {
-							if let Err(e) = writer.write_epubs(books, &mut tags) {
-								eprintln!("Error writing batch:{}", e);
-							}
+						if processed % 10000 == 0 {
+							book_batch.par_iter().map(|book_path| {
+								match parse_epub(&l.path().display().to_string(), use_coverdir, coverdir) {
+									Ok(bm) => {
+										if seen_bookids.insert(bm.id) {
+											books.push(bm);
+											wrote += 1;
+										} else {
+											println!("DUPLICATE: {}", &l.path().display());
+										}
+									}
+									Err(err) => eprintln!("Error with {}: {:?}", &l.path().display(), err),
+								}
+
+								if let Err(e) = writer.write_epubs(books, &mut tags) {
+									eprintln!("Error writing batch:{}", e);
+								}
+
+								Ok(())
+							});
+
+
 
 							books = Vec::new();
 							report_progress(processed, total_books, wrote, batch_start, scan_start);
