@@ -30,7 +30,7 @@ use ammonia::{Builder, UrlRelative};
 use tantivy::query::QueryParser;
 
 pub struct TantivyWriter<'a> {
-	index_writer: IndexWriter,
+	index_writer: std::sync::RwLock<IndexWriter>,
 	id: Field,
 	title: Field,
 	description: Field,
@@ -106,7 +106,7 @@ impl<'a> TantivyWriter<'a> {
 		}
 
 		Ok(TantivyWriter {
-			index_writer: writer,
+			index_writer: std::sync::RwLock::new(writer),
 			id,
 			title,
 			description,
@@ -164,7 +164,7 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 				}
 			}
 
-			self.index_writer.add_document(ttdoc);
+			self.index_writer.write().unwrap().add_document(ttdoc);
 
 			//tags can probably be "facets" in tantivy, see: https://github.com/tantivy-search/tantivy/issues/215
 			//this appears ot be only way to support multiple of them
@@ -173,12 +173,12 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 	}
 
 	fn commit(&mut self) -> Result<(), Box<dyn Error>> {
-		match self.index_writer.commit() {
+		match self.index_writer.write().unwrap().commit() {
 			Ok(_) => Ok(()),
 			Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),
 		}?;
 
-		match executor::block_on(self.index_writer.garbage_collect_files()) {
+		match executor::block_on(self.index_writer.write().unwrap().garbage_collect_files()) {
 			Ok(_) => Ok(()),
 			Err(_) => Err(Box::new(io::Error::new(
 				io::ErrorKind::Other,

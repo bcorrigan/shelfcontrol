@@ -20,7 +20,7 @@ pub fn scan_dirs(
 	dirs: Vec<String>,
 	coverdir: Option<&str>,
 	use_coverdir: bool,
-	mut writer: Box<dyn BookWriter>,
+	mut writer: Box<dyn BookWriter + Send + Sync>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	for directory in &dirs {
 		if !Path::new(&directory).exists() {
@@ -68,7 +68,7 @@ pub fn scan_dirs(
 						processed += 1;
 
 						if processed % 10000 == 0 {
-							book_batch.par_iter().map(|book_path| {
+							book_batch.par_iter().for_each(|book_path| {
 								match parse_epub(&l.path().display().to_string(), use_coverdir, coverdir) {
 									Ok(bm) => {
 										if seen_bookids.insert(bm.id) {
@@ -84,8 +84,6 @@ pub fn scan_dirs(
 								if let Err(e) = writer.write_epubs(books, &mut tags) {
 									eprintln!("Error writing batch:{}", e);
 								}
-
-								Ok(())
 							});
 
 

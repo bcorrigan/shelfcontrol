@@ -218,7 +218,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		None => (false, None),
 	};
 
-	let writer: Box<dyn BookWriter> = match matches.value_of("db").unwrap_or("tantivy") {
+	let writer: Box<dyn BookWriter + Sync + Send> = match matches.value_of("db").unwrap_or("tantivy") {
 		"tantivy" => Box::new(match ttvy::TantivyWriter::new(
 			value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string()),
 		) {
