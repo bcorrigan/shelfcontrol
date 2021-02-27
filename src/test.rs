@@ -7,9 +7,19 @@ mod test {
 	use std::io::Error;
 	use std::{thread, time};
 
+	struct DirsCleanup;
+
+	impl ::std::ops::Drop for DirsCleanup {
+		fn drop(&mut self) {
+			fs::remove_dir_all("target/images").unwrap();
+			fs::remove_dir_all("target/index").unwrap();
+		}
+	}
+
 	#[test]
 	fn integration_test() -> Result<(), Error> {
 		fs::create_dir("target/images")?;
+		let _dirs_cleanup = DirsCleanup;
 
 		let writer = ttvy::TantivyWriter::new("target/index".to_string()).unwrap();
 		scanner::scan_dirs(["test/library".to_string()].to_vec(), Some("target/images"), true, Box::new(writer)).expect("Scanner failed");
@@ -20,9 +30,7 @@ mod test {
 		println!("result: {}", result.to_json());
 
 		assert!(result.to_json().contains("\"count\":1, \"position\":0, \"query\":\"darwin\", \"books\":[{\"id\":\"-5302641238507735522\",\"title\":\"The Origin of Species\",\"description\":\"A distinguished amateur scientist lays out the evidence for the origin of species by means of natural selection.\",\"publisher\":\"Standard Ebooks\",\"creator\":\"Charles Darwin\",\"subject\":[\"Evolution (Biology)\",\"Natural selection\"],\"file"));
-		assert!(result
-			.to_json()
-			.contains("charles-darwin_the-origin-of-species.epub\",\"filesize\":94482,\"modtime\""));
+
 		assert!(result
 			.to_json()
 			.contains("\"pubdate\":\"2019-01-15T04:52:30Z\",\"moddate\":\"2019-01-15T04:52:30Z\",\"cover_mime\":\"image/jpeg\"}]}"));
@@ -46,7 +54,6 @@ mod test {
 		//need to sleep else race condition prevents delete
 		let second = time::Duration::from_millis(1000);
 		thread::sleep(second);
-		fs::remove_dir_all("target/images")?;
-		fs::remove_dir_all("target/index")
+		Ok(())
 	}
 }

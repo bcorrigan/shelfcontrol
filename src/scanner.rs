@@ -1,7 +1,7 @@
 use chrono::{DateTime, Local};
 use epub::doc::EpubDoc;
 use itertools::Itertools;
-
+use rayon::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::error::Error;
 use std::fs;
@@ -20,7 +20,7 @@ pub fn scan_dirs(
 	dirs: Vec<String>,
 	coverdir: Option<&str>,
 	use_coverdir: bool,
-	mut writer: Box<dyn BookWriter>,
+	mut writer: Box<dyn BookWriter + Send + Sync>,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	for directory in &dirs {
 		if !Path::new(&directory).exists() {
@@ -46,15 +46,15 @@ pub fn scan_dirs(
 
 	println!("{} books to be scanned.", &total_books);
 
-	let mut books = Vec::new();
-
 	//TODO make this a bookkeeping struct
 	let mut tags = HashMap::new();
-	let mut seen_bookids = HashSet::new();
+	let seen_bookids = std::sync::RwLock::new(HashSet::new());
 	let mut wrote: u64 = 0;
+	let errored = std::sync::Mutex::new(0);
 	let mut processed: u64 = 0;
 	let mut batch_start = SystemTime::now();
 	let scan_start = SystemTime::now();
+	let mut book_batch = vec![];
 
 	for dir in &dirs {
 		let walker = WalkDir::new(&dir).into_iter();
@@ -62,28 +62,45 @@ pub fn scan_dirs(
 			match entry {
 				Ok(l) => {
 					if l.path().display().to_string().ends_with(".epub") && l.file_type().is_file() {
-						match parse_epub(&l.path().display().to_string(), use_coverdir, coverdir) {
-							Ok(bm) => {
-								if seen_bookids.insert(bm.id) {
-									books.push(bm);
-									wrote += 1;
-								} else {
-									println!("DUPLICATE: {}", &l.path().display());
-								}
-							}
-							Err(err) => eprintln!("Error with {}: {:?}", &l.path().display(), err),
-						}
+						book_batch.push(l.path().display().to_string());
 
 						processed += 1;
 
-						if processed % 1000 == 0 {
-							if let Err(e) = writer.write_epubs(books, &mut tags) {
+						if processed % 10000 == 0 || processed == total_books {
+							let bms:Vec<BookMetadata> = book_batch.par_iter().map( |book_path| {
+								match parse_epub( book_path, use_coverdir, coverdir) {
+									Ok(bm) => {
+										if !seen_bookids.read().unwrap().contains(&bm.id) {
+											seen_bookids.write().unwrap().insert(bm.id);
+											Some(bm)
+										} else {
+											None
+										}
+									}
+									Err(err) => {
+										eprintln!("Error with {}: {:?}", book_path, err);
+										let mut error_lock = errored.lock().unwrap();
+										*error_lock += 1;
+										None
+									}
+								}
+							}).filter(|bmo| bmo.is_some())
+							  .map(|bms| bms.unwrap())
+							  .collect();
+
+							wrote += bms.len() as u64;
+
+							if let Err(e) = writer.write_epubs(bms, &mut tags) {
 								eprintln!("Error writing batch:{}", e);
+							} else {
+								writer.commit()?;
 							}
 
-							books = Vec::new();
 							report_progress(processed, total_books, wrote, batch_start, scan_start);
 							batch_start = SystemTime::now();
+
+							book_batch.clear();
+
 						}
 					}
 				}
@@ -94,14 +111,12 @@ pub fn scan_dirs(
 			}
 		}
 	}
-	if let Err(e) = writer.write_epubs(books, &mut tags) {
-		eprintln!("Error writing batch:{}", e);
-	}
 
-	report_progress(processed, total_books, wrote, batch_start, scan_start);
+	report_final(total_books, wrote, *errored.lock().unwrap(), scan_start);
+
 	println!("Scan complete.");
 	//we commit only once at the end, this results in one segment which is much faster than 5000 segments
-	writer.commit()?;
+	//writer.commit()?;
 	println!("Index created and garbage collected");
 
 	writer.write_tags(tags, 10)
@@ -209,7 +224,10 @@ fn report_progress(processed: u64, total_books: u64, wrote: u64, batch_start: Sy
 	match SystemTime::now().duration_since(batch_start) {
 		Ok(n) => {
 			let millis = n.as_secs() * 1000 + u64::from(n.subsec_millis());
-			let bps = (1000f64 / millis as f64) * 1000_f64;
+			let bps = (1000f64 / millis as f64) * 10000_f64;
+
+			//took 10,000 ms to do 1000 books
+			//= (1000 / 10000) * 1000 =
 
 			let total_secs = SystemTime::now().duration_since(scan_start).unwrap().as_secs();
 			let total_bps = processed as f64 / total_secs as f64;
@@ -224,6 +242,25 @@ fn report_progress(processed: u64, total_books: u64, wrote: u64, batch_start: Sy
 				&wrote,
 				total_bps,
 				end_time.to_rfc2822()
+			);
+		}
+		Err(_) => panic!("Time went backwards."),
+	}
+}
+
+fn report_final( total_books: u64, wrote: u64, errored_books: u64, scan_start: SystemTime) {
+	match SystemTime::now().duration_since(scan_start) {
+		Ok(n) => {
+			let millis = n.as_secs() * 1000 + u64::from(n.subsec_millis());
+			let actual_bps = (1000f64 / millis as f64) * wrote as f64;
+			let processed_bps = (1000f64 / millis as f64) * total_books as f64;
+			println!("Completed. Actual: {}bps Total processed: {}bps Total written: {} Errored: {} Duplicates: {} Duration(s): {}",
+				actual_bps,
+				processed_bps,
+				wrote,
+				errored_books,
+				total_books - wrote - errored_books,
+				n.as_secs()
 			);
 		}
 		Err(_) => panic!("Time went backwards."),
