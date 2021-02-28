@@ -14,17 +14,17 @@ epub = { git = "https://github.com/danigm/epub-rs" }
 clap = "^2"
 tantivy = "^0.14"
 rayon = "^1.5"
-walkdir = "^2"
-chrono = "^0.4"
-rouille = "^3"
+walkdir = "^2" 
+chrono = "^0.4" #not that well maintained tho not dead - maybe roll own
+rouille = "3" #dead project so need to replace
 serde_json = "^1.0"
 serde = "^1"
 serde_derive = "^1"
 ammonia = "3"
-maplit = "1"
-itertools = "^0.10"
-failure = "^0.1"
-futures = "^0.3"
+maplit = "1" # dead, get rid of it
+itertools = "^0.10" #only used for string.join so should look to remove
+failure = "^0.1" #deprecated - move to Anyhow or thiserror
+futures = "^0.3" 
 
 [build-dependencies]
 ructe = "^0.13"
