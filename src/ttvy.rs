@@ -265,13 +265,16 @@ impl TantivyReader {
 	}
 
 	//no query str needed?
-	pub fn categorise(&self, field: &str, prefix: &str) -> Result<CategorySearchResult, StoreError> {
+	pub fn categorise(&self, field: &str, prefix: &str, query: Option<&str>) -> Result<CategorySearchResult, StoreError> {
 		let searcher = self.reader.searcher();
 		let fld = TantivyReader::get_field(searcher.schema(), field)?;
-		let cat_collector = AlphabeticalCategories::new(0, fld);
-		let query = &self.query_parser.parse_query(&format!("startsWith:{}", &prefix).to_string())?;
+		let cat_collector = AlphabeticalCategories::new(1, fld);
+		let query = match query {
+			Some(q) => self.query_parser.parse_query(q)?,
+			None => self.query_parser.parse_query(&format!("startsWith:{}", &prefix).to_string())?
+		};
 
-		let cats = searcher.search(query, &cat_collector)?;
+		let cats = searcher.search(&query, &cat_collector)?;
 		let cats_vec:Vec<Category> = cats.iter().map(|(k,v)| {
 			Category {
 				prefix: k.to_string(),
@@ -381,6 +384,8 @@ impl AlphabeticalCategories {
 		if char_position < 1 {
 			panic!("Position must be positive.");
 		}
+
+		println!("Created AlphabeticalCategories({:?}, {:?})", char_position, category_field);
 
 		AlphabeticalCategories {
 			char_position,

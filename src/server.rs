@@ -123,13 +123,13 @@ impl Server {
 					},
 					(GET) (/opds/authors) => {
 						let cat_param = &request.get_param("categorise");
-						let cat_str = match cat_param {
-							Some(cat) => cat,
-							None => "*"
-						}.trim();
+						let (cat_str, query) = match cat_param {
+							Some(cat) => (cat.to_string(), None),
+							None => ("".to_string(), Some("*"))
+						};
 
 						//call categorise
-						let search_result = match self.reader.categorise("creator", cat_str) {
+						let search_result = match self.reader.categorise("creator", &cat_str, query) {
 							Ok(result) => result,
 							Err(_) => return self.get_json_error_response("Author search error", "Author search error"), //FIXME opds error response!
 						};
