@@ -129,8 +129,21 @@ impl Server {
 						}.trim();
 
 						//call categorise
+						let search_result = match self.reader.categorise("creator", cat_str) {
+							Ok(result) => result,
+							Err(_) => return self.get_json_error_response("Author search error", "Author search error"), //FIXME opds error response!
+						};
 
-						Response::empty_404()
+						//populate OpdsCategory navs, for each search result
+						let navs:Vec<OpdsCategory> = search_result.categories.iter().map(|cat| {
+							OpdsCategory::new(format!( "{} ({})", cat.prefix, cat.count), format!("/opds/authors?categorise={}", cat.prefix))
+						}).collect();
+
+						let mut buf = Vec::new();
+						match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"2021-01-21T10:56:30+01:00".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &None, &Some(navs)) { 
+							Ok(_) => return Response::from_data("application/xml", buf),
+							Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
+						}
 					},
 					(GET) (/opds/tags) => {
 						unimplemented!()

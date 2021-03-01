@@ -1,7 +1,6 @@
 use std::error::Error;
 
 use std::collections::HashMap;
-use std::collections::HashSet;
 
 use std::fs;
 use std::io;
@@ -23,7 +22,7 @@ use tantivy::{Index, IndexReader, ReloadPolicy};
 use futures::executor;
 
 use crate::error::StoreError;
-use crate::search_result::{SearchResult, CategorySearchResult};
+use crate::search_result::{SearchResult, CategorySearchResult, Category};
 use crate::BookMetadata;
 use crate::BookWriter;
 use ammonia::{Builder, UrlRelative};
@@ -265,17 +264,25 @@ impl TantivyReader {
 		})
 	}
 
-	pub fn categorise(&self, field: &str, query: &str, prefix: &str) -> Result<CategorySearchResult, StoreError> {
+	//no query str needed?
+	pub fn categorise(&self, field: &str, prefix: &str) -> Result<CategorySearchResult, StoreError> {
 		let searcher = self.reader.searcher();
 		let fld = TantivyReader::get_field(searcher.schema(), field)?;
 		let cat_collector = AlphabeticalCategories::new(0, fld);
 		let query = &self.query_parser.parse_query(&format!("startsWith:{}", &prefix).to_string())?;
 
 		let cats = searcher.search(query, &cat_collector)?;
+		let cats_vec:Vec<Category> = cats.iter().map(|(k,v)| {
+			Category {
+				prefix: k.to_string(),
+				count: *v
+			}
+		}).collect();
 
-
-
-		unimplemented!()
+		Ok(CategorySearchResult{
+		    count: cats_vec.len(),
+		    categories: cats_vec,
+		})
 	}
 
 	pub fn get_book(&self, id: i64) -> Option<BookMetadata> {
