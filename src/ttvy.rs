@@ -275,12 +275,14 @@ impl TantivyReader {
 		};
 
 		let cats = searcher.search(&query, &cat_collector)?;
-		let cats_vec:Vec<Category> = cats.iter().map(|(k,v)| {
+		let mut cats_vec:Vec<Category> = cats.iter().map(|(k,v)| {
 			Category {
 				prefix: k.to_string(),
 				count: *v
 			}
-		}).collect();
+		}).filter(|f| f.count>100).collect();
+
+		cats_vec.sort_by(|a,b| a.prefix.cmp(&b.prefix));
 
 		Ok(CategorySearchResult{
 		    count: cats_vec.len(),
@@ -450,8 +452,13 @@ impl SegmentCollector for AlphabeticalCategoriesSegmentCollector {
 		//If it is a facet - segmentReader.facet_reader() then facet_reader.facet_ords() & facet_from_ords()
 		let document = self.store_reader.get(doc).unwrap();
 		let field_text = document.get_first(self.category_field).unwrap().text().unwrap();
-		let char = field_text.chars().nth(self.char_position).unwrap();
-		self.fruit.insert(char, self.fruit.get(&char).unwrap_or(&0) + 1);
+		//println!("pos: {} text:{:?}:", self.char_position, &field_text.chars());
+		//not populated - just ignore it
+		
+		match field_text.chars().nth(self.char_position-1) {
+		    Some(char) => self.fruit.insert(char.to_ascii_uppercase(), self.fruit.get(&char.to_ascii_uppercase()).unwrap_or(&0) + 1),
+		    None => None
+		};
 	}
 
 	fn harvest(self) -> Self::Fruit {
