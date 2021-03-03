@@ -267,16 +267,21 @@ impl TantivyReader {
 	pub fn categorise(&self, field: &str, prefix: &str, query: Option<&str>, floor: usize) -> Result<CategorySearchResult, StoreError> {
 		let searcher = self.reader.searcher();
 		let fld = TantivyReader::get_field(searcher.schema(), field)?;
-		let cat_collector = AlphabeticalCategories::new(1, fld);
+		
+		let cat_collector = AlphabeticalCategories::new(prefix.len()+1, fld);
 		let query = match query {
 			Some(q) => self.query_parser.parse_query(q)?,
-			None => Box::new(tantivy::query::RegexQuery::from_pattern(&format!("^{}", prefix), fld)?)
+			None => Box::new(tantivy::query::RegexQuery::from_pattern(&format!("{}.*", prefix), fld)?) //TODO case sensitivity
 		};
 
 		let cats = searcher.search(&query, &cat_collector)?;
 		let mut cats_vec:Vec<Category> = cats.iter().map(|(k,v)| {
 			Category {
-				prefix: k.to_string(),
+				prefix: { 
+						let mut prefix = prefix.to_owned();
+						prefix.push_str(&k.to_string());
+						prefix
+					}, 
 				count: *v
 			}
 		}).filter(|f| f.count>floor).collect();
