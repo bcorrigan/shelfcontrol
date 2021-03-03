@@ -5,6 +5,7 @@ mod test {
 	use crate::ttvy;
 	use std::fs;
 	use std::io::Error;
+	use crate::error::StoreError;
 	use std::{thread, time};
 
 	struct DirsCleanup;
@@ -16,15 +17,19 @@ mod test {
 		}
 	}
 
+	fn get_reader() -> Result<ttvy::TantivyReader, Error> {
+    	fs::create_dir("target/images")?;
+
+    	let writer = ttvy::TantivyWriter::new("target/index".to_string()).unwrap();
+    	scanner::scan_dirs(["test/library".to_string()].to_vec(), Some("target/images"), true, Box::new(writer)).expect("Scanner failed");
+    	let reader = ttvy::TantivyReader::new("target/index".to_string()).expect("Reader failed");
+    	Ok(reader)
+	}
+
 	#[test]
 	fn integration_test() -> Result<(), Error> {
-		fs::create_dir("target/images")?;
 		let _dirs_cleanup = DirsCleanup;
-
-		let writer = ttvy::TantivyWriter::new("target/index".to_string()).unwrap();
-		scanner::scan_dirs(["test/library".to_string()].to_vec(), Some("target/images"), true, Box::new(writer)).expect("Scanner failed");
-
-		let reader = ttvy::TantivyReader::new("target/index".to_string()).expect("Reader failed");
+		let reader = get_reader()?;
 		let mut result = reader.search("darwin", 0, 10).expect("Search failed");
 
 		println!("result: {}", result.to_json());
@@ -54,6 +59,25 @@ mod test {
 		//need to sleep else race condition prevents delete
 		let second = time::Duration::from_millis(1000);
 		thread::sleep(second);
+		Ok(())
+	}
+
+
+
+	#[test]
+	fn categorise() -> Result<(), Error> {
+		let _dirs_cleanup = DirsCleanup;
+		let reader = get_reader()?;
+		let cats = reader.categorise("creator", "", Some("*"), 0).expect("Categorisation failed.");
+		//cats.categories.iter().for_each(|cat| {
+		//	println!("Got category:{} ({})", cat.prefix, cat.count);
+		//});
+
+		assert!(cats.count == 6);
+
+		let sum = cats.categories.iter().fold(0, |acc, cat| acc + cat.count);
+		assert!(sum == 8); //number of books in each category should add to 8
+
 		Ok(())
 	}
 }

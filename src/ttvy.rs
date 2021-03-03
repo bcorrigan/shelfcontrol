@@ -264,14 +264,13 @@ impl TantivyReader {
 		})
 	}
 
-	//no query str needed?
-	pub fn categorise(&self, field: &str, prefix: &str, query: Option<&str>) -> Result<CategorySearchResult, StoreError> {
+	pub fn categorise(&self, field: &str, prefix: &str, query: Option<&str>, floor: usize) -> Result<CategorySearchResult, StoreError> {
 		let searcher = self.reader.searcher();
 		let fld = TantivyReader::get_field(searcher.schema(), field)?;
 		let cat_collector = AlphabeticalCategories::new(1, fld);
 		let query = match query {
 			Some(q) => self.query_parser.parse_query(q)?,
-			None => self.query_parser.parse_query(&format!("startsWith:{}", &prefix).to_string())?
+			None => Box::new(tantivy::query::RegexQuery::from_pattern(&format!("^{}", prefix), fld)?)
 		};
 
 		let cats = searcher.search(&query, &cat_collector)?;
@@ -280,7 +279,7 @@ impl TantivyReader {
 				prefix: k.to_string(),
 				count: *v
 			}
-		}).filter(|f| f.count>100).collect();
+		}).filter(|f| f.count>floor).collect();
 
 		cats_vec.sort_by(|a,b| a.prefix.cmp(&b.prefix));
 

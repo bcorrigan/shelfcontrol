@@ -129,7 +129,7 @@ impl Server {
 						};
 
 						//call categorise
-						let search_result = match self.reader.categorise("creator", &cat_str, query) {
+						let search_result = match self.reader.categorise("creator", &cat_str, query, 100) {
 							Ok(result) => result,
 							Err(_) => return self.get_json_error_response("Author search error", "Author search error"), //FIXME opds error response!
 						};
