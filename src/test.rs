@@ -69,6 +69,7 @@ mod test {
 		let _dirs_cleanup = DirsCleanup;
 		let reader = get_reader()?;
 		let cats = reader.categorise("creator", "", Some("*"), 0).expect("Categorisation failed.");
+
 		//cats.categories.iter().for_each(|cat| {
 		//	println!("Got category:{} ({})", cat.prefix, cat.count);
 		//});
@@ -77,6 +78,17 @@ mod test {
 
 		let sum = cats.categories.iter().fold(0, |acc, cat| acc + cat.count);
 		assert!(sum == 8); //number of books in each category should add to 8
+		
+		let prefix_cats = reader.categorise("creator", "C", None, 0).expect("Categorisation with prefix failed.");;
+
+		//prefix_cats.categories.iter().for_each(|cat| {
+		//	println!("Got category:{} ({})", cat.prefix, cat.count);
+		//});
+
+		assert!(prefix_cats.count == 1);
+
+		let prefcat = prefix_cats.categories.get(0).expect("Should have a category");
+		assert!(prefcat.prefix == "CH");
 
 		Ok(())
 	}

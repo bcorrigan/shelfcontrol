@@ -268,11 +268,14 @@ impl TantivyReader {
 		let searcher = self.reader.searcher();
 		let fld = TantivyReader::get_field(searcher.schema(), field)?;
 		
-		let cat_collector = AlphabeticalCategories::new(prefix.len()+1, fld);
+		let cat_collector = AlphabeticalCategories::new(prefix.len()+1, fld, prefix);
 		let query = match query {
 			Some(q) => self.query_parser.parse_query(q)?,
-			None => Box::new(tantivy::query::RegexQuery::from_pattern(&format!("{}.*", prefix), fld)?) //TODO case sensitivity
+			None => Box::new(tantivy::query::RegexQuery::from_pattern(&format!("{}.*", prefix.to_ascii_lowercase()), fld)?) //TODO case sensitivity
 		};
+
+		let count = searcher.search(&query, &tantivy::collector::Count)?;
+		println!("Query returns {}", count);
 
 		let cats = searcher.search(&query, &cat_collector)?;
 		let mut cats_vec:Vec<Category> = cats.iter().map(|(k,v)| {
@@ -380,33 +383,35 @@ impl TantivyReader {
 }
 
 //Reduce the search results to top categories with numbers of each
-pub struct AlphabeticalCategories {
+pub struct AlphabeticalCategories<'a> {
 	char_position: usize, //1 means first letter, 2 means 2nd letter etc
 	category_field: Field,
+	prefix: &'a str,
 }
 
-impl AlphabeticalCategories {
-	pub fn new(char_position: usize, category_field: Field) -> AlphabeticalCategories {
+impl<'a> AlphabeticalCategories<'a> {
+	pub fn new(char_position: usize, category_field: Field, prefix: &'a str) -> AlphabeticalCategories<'a> {
 		if char_position < 1 {
 			panic!("Position must be positive.");
 		}
 
-		println!("Created AlphabeticalCategories({:?}, {:?})", char_position, category_field);
+		//println!("Created AlphabeticalCategories({:?}, {:?})", char_position, category_field);
 
 		AlphabeticalCategories {
 			char_position,
 			category_field,
+			prefix
 		}
 	}
 }
 
-impl Collector for AlphabeticalCategories {
+impl<'a> Collector for AlphabeticalCategories<'a> {
 	type Fruit = HashMap<char, usize>;
 
 	type Child = AlphabeticalCategoriesSegmentCollector;
 
 	fn for_segment(&self, _: SegmentLocalId, segment_reader: &SegmentReader) -> tantivy::Result<Self::Child> {
-		Ok(AlphabeticalCategoriesSegmentCollector::new(self.char_position, self.category_field, segment_reader))
+		Ok(AlphabeticalCategoriesSegmentCollector::new(self.char_position, self.category_field, segment_reader, self.prefix.to_owned()))
 	}
 
 	fn requires_scoring(&self) -> bool {
@@ -435,15 +440,17 @@ pub struct AlphabeticalCategoriesSegmentCollector {
 	category_field: Field,
 	fruit: HashMap<char, usize>,
 	store_reader: StoreReader,
+	prefix: String,
 }
 
 impl AlphabeticalCategoriesSegmentCollector {
-	pub fn new(char_position: usize, category_field: Field, segment_reader: &SegmentReader) -> AlphabeticalCategoriesSegmentCollector {
+	pub fn new(char_position: usize, category_field: Field, segment_reader: &SegmentReader, prefix: String) -> AlphabeticalCategoriesSegmentCollector {
 		AlphabeticalCategoriesSegmentCollector {
 			char_position,
 			category_field,
 			fruit: HashMap::new(),
 			store_reader: segment_reader.get_store_reader().unwrap(),
+			prefix
 		}
 	}
 }
@@ -459,10 +466,12 @@ impl SegmentCollector for AlphabeticalCategoriesSegmentCollector {
 		//println!("pos: {} text:{:?}:", self.char_position, &field_text.chars());
 		//not populated - just ignore it
 		
-		match field_text.chars().nth(self.char_position-1) {
-		    Some(char) => self.fruit.insert(char.to_ascii_uppercase(), self.fruit.get(&char.to_ascii_uppercase()).unwrap_or(&0) + 1),
-		    None => None
-		};
+		if field_text.starts_with(&self.prefix) {
+			match field_text.chars().nth(self.char_position-1) {
+		    	Some(char) => self.fruit.insert(char.to_ascii_uppercase(), self.fruit.get(&char.to_ascii_uppercase()).unwrap_or(&0) + 1),
+		    	None => None
+			};
+		}
 	}
 
 	fn harvest(self) -> Self::Fruit {
