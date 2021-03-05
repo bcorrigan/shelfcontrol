@@ -79,7 +79,7 @@ mod test {
 		let sum = cats.categories.iter().fold(0, |acc, cat| acc + cat.count);
 		assert!(sum == 8); //number of books in each category should add to 8
 		
-		let prefix_cats = reader.categorise("creator", "C", None, 0).expect("Categorisation with prefix failed.");;
+		let prefix_cats = reader.categorise("creator", "C", None, 0).expect("Categorisation with 1 letter prefix failed.");
 
 		//prefix_cats.categories.iter().for_each(|cat| {
 		//	println!("Got category:{} ({})", cat.prefix, cat.count);
@@ -89,6 +89,14 @@ mod test {
 
 		let prefcat = prefix_cats.categories.get(0).expect("Should have a category");
 		assert!(prefcat.prefix == "CH");
+
+		let prefix_cats3 = reader.categorise("creator", "CHA", None, 0).expect("Categorisation with 3 letter prefix failed.");
+		
+		/*prefix_cats3.categories.iter().for_each(|cat| {
+			println!("Got category:{} ({})", cat.prefix, cat.count);
+		});*/
+
+		assert!(prefix_cats3.count == 1);
 
 		Ok(())
 	}

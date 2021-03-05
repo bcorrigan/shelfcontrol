@@ -274,8 +274,8 @@ impl TantivyReader {
 			None => Box::new(tantivy::query::RegexQuery::from_pattern(&format!("{}.*", prefix.to_ascii_lowercase()), fld)?) //TODO case sensitivity
 		};
 
-		let count = searcher.search(&query, &tantivy::collector::Count)?;
-		println!("Query returns {}", count);
+		//let count = searcher.search(&query, &tantivy::collector::Count)?;
+		//println!("Query returns {}", count);
 
 		let cats = searcher.search(&query, &cat_collector)?;
 		let mut cats_vec:Vec<Category> = cats.iter().map(|(k,v)| {
@@ -466,9 +466,11 @@ impl SegmentCollector for AlphabeticalCategoriesSegmentCollector {
 		//println!("pos: {} text:{:?}:", self.char_position, &field_text.chars());
 		//not populated - just ignore it
 		
-		if field_text.starts_with(&self.prefix) {
+		if field_text.to_ascii_uppercase().starts_with(&self.prefix) {
 			match field_text.chars().nth(self.char_position-1) {
-		    	Some(char) => self.fruit.insert(char.to_ascii_uppercase(), self.fruit.get(&char.to_ascii_uppercase()).unwrap_or(&0) + 1),
+		    	Some(char) => {
+					self.fruit.insert(char.to_ascii_uppercase(), self.fruit.get(&char.to_ascii_uppercase()).unwrap_or(&0) + 1)
+				},
 		    	None => None
 			};
 		}
