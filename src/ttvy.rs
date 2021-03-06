@@ -480,3 +480,87 @@ impl SegmentCollector for AlphabeticalCategoriesSegmentCollector {
 		self.fruit
 	}
 }
+
+pub struct FieldCategories {
+	category_field: Field
+}
+
+impl FieldCategories {
+	pub fn new(category_field: Field) -> FieldCategories {
+		FieldCategories {
+			category_field
+		}
+	}
+}
+
+impl Collector for FieldCategories {
+	type Fruit = HashMap<String, usize>;
+
+	type Child = FieldCategoriesSegmentCollector;
+
+	fn for_segment(&self, _: SegmentLocalId, segment_reader: &SegmentReader) -> tantivy::Result<Self::Child> {
+		Ok(FieldCategoriesSegmentCollector::new(self.category_field, segment_reader))
+	}
+
+	fn requires_scoring(&self) -> bool {
+		false
+	}
+
+	fn merge_fruits(&self, child_fruits: Vec<HashMap<String, usize>>) -> tantivy::Result<Self::Fruit> {
+		let mut merged: HashMap<String, usize> = HashMap::new();
+
+		for fruit in child_fruits { 
+			for (field_val, count) in fruit {
+				if merged.contains_key(&field_val) {
+					merged.insert(field_val, merged.get(&field_val).unwrap() + count);
+				} else {
+					merged.insert(field_val, count);
+				}
+			}
+		}
+
+		Ok(merged)
+	}
+}
+
+pub struct FieldCategoriesSegmentCollector {
+	category_field: Field,
+	fruit: HashMap<String, usize>,
+	store_reader: StoreReader,
+}
+
+impl FieldCategoriesSegmentCollector {
+	pub fn new(category_field: Field, segment_reader: &SegmentReader) -> FieldCategoriesSegmentCollector {
+		FieldCategoriesSegmentCollector {
+			category_field,
+			fruit: HashMap::new(),
+			store_reader: segment_reader.get_store_reader().unwrap()
+		}
+	}
+}
+
+impl SegmentCollector for FieldCategoriesSegmentCollector {
+	type Fruit = HashMap<String, usize>;
+
+	fn collect(&mut self, doc: DocId, _: Score) {
+		//segmentReader.get_store_reader().get(docId) => slow (returns LZ4 block to decompress!) 
+		//If it is a facet - segmentReader.facet_reader() then facet_reader.facet_ords() & facet_from_ords()
+		let document = self.store_reader.get(doc).unwrap();
+		let field_text = document.get_first(self.category_field).unwrap().text().unwrap();
+		//println!("pos: {} text:{:?}:", self.char_position, &field_text.chars());
+		//not populated - just ignore it
+		
+		if field_text.to_ascii_uppercase().starts_with(&self.prefix) {
+			match field_text.chars().nth(self.char_position-1) {
+		    	Some(char) => {
+					self.fruit.insert(char.to_ascii_uppercase(), self.fruit.get(&char.to_ascii_uppercase()).unwrap_or(&0) + 1)
+				},
+		    	None => None
+			};
+		}
+	}
+
+	fn harvest(self) -> Self::Fruit {
+		self.fruit
+	}
+}
