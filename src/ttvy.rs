@@ -297,6 +297,33 @@ impl TantivyReader {
 		})
 	}
 
+	pub fn count_by_field(&self, field: &str,prefix: &str) -> Result<CategorySearchResult, StoreError> {
+		let searcher = self.reader.searcher();
+		let fld = TantivyReader::get_field(searcher.schema(), field)?;
+
+		let fld_collector = FieldCategories::new(fld);
+		let query: Box<dyn tantivy::query::Query> = Box::new(tantivy::query::RegexQuery::from_pattern(&format!("{}.*", prefix.to_ascii_lowercase()), fld)?);
+		
+		let cats = searcher.search(&query, &fld_collector)?;
+
+		let mut cats_vec:Vec<Category> = cats.iter().map(|(k,v)| {
+			Category {
+				prefix: { 
+						k.to_string()
+					}, 
+				count: *v
+			}
+		}).collect();
+
+		cats_vec.sort_by(|a,b| a.prefix.cmp(&b.prefix));
+
+		Ok(CategorySearchResult{
+		    count: cats_vec.len(),
+		    categories: cats_vec,
+		})
+
+	}
+
 	pub fn get_book(&self, id: i64) -> Option<BookMetadata> {
 		let searcher = &self.reader.searcher();
 		let id_term = Term::from_field_i64(self.id_field, id);
@@ -512,7 +539,7 @@ impl Collector for FieldCategories {
 		for fruit in child_fruits { 
 			for (field_val, count) in fruit {
 				if merged.contains_key(&field_val) {
-					let other_count = merged.get(&field_val).unwrap();
+					let other_count = merged.get(&field_val).unwrap().clone();
 					merged.insert(field_val, other_count + count);
 				} else {
 					merged.insert(field_val, count);
