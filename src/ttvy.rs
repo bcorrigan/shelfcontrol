@@ -304,9 +304,13 @@ impl TantivyReader {
 		let fld_collector = FieldCategories::new(fld);
 		let query: Box<dyn tantivy::query::Query> = Box::new(tantivy::query::RegexQuery::from_pattern(&format!("{}.*", prefix.to_ascii_lowercase()), fld)?);
 		
+		//let count = searcher.search(&query, &tantivy::collector::Count)?;
+		//println!("Query {:?} returns {}", query, count);
+
 		let cats = searcher.search(&query, &fld_collector)?;
 
 		let mut cats_vec:Vec<Category> = cats.iter().map(|(k,v)| {
+			println!("k,v:{},{}",k,v);
 			Category {
 				prefix: { 
 						k.to_string()

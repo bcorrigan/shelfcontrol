@@ -127,9 +127,14 @@ impl Server {
 							Some(cat) => (cat.to_string(), None),
 							None => ("".to_string(), Some("*"))
 						};
+						
+						let results = match &request.get_param("byAuthor") {
+							Some(_) => self.reader.count_by_field("creator", &cat_str),
+							None => self.reader.categorise("creator", &cat_str, query, 100),
+						};
 
 						//call categorise
-						let search_result = match self.reader.categorise("creator", &cat_str, query, 100) {
+						let search_result = match results {
 							Ok(result) => result,
 							Err(e) => {
 								println!("Error:{:?}", e);
@@ -139,7 +144,12 @@ impl Server {
 
 						//populate OpdsCategory navs, for each search result
 						let navs:Vec<OpdsCategory> = search_result.categories.iter().map(|cat| {
-							OpdsCategory::new(format!( "{} ({})", cat.prefix, cat.count), format!("/opds/authors?categorise={}", cat.prefix))
+							let url = if cat.count>200 {
+									format!("/opds/authors?categorise={}", cat.prefix.trim())
+								} else {
+									format!("/opds/authors?categorise={}&byAuthor=true", cat.prefix.trim())
+								};
+							OpdsCategory::new(format!( "{} ({})", cat.prefix, cat.count), url)
 						}).collect();
 
 						let mut buf = Vec::new();
