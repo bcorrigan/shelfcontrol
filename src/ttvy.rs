@@ -512,7 +512,8 @@ impl Collector for FieldCategories {
 		for fruit in child_fruits { 
 			for (field_val, count) in fruit {
 				if merged.contains_key(&field_val) {
-					merged.insert(field_val, merged.get(&field_val).unwrap() + count);
+					let other_count = merged.get(&field_val).unwrap();
+					merged.insert(field_val, other_count + count);
 				} else {
 					merged.insert(field_val, count);
 				}
@@ -549,15 +550,7 @@ impl SegmentCollector for FieldCategoriesSegmentCollector {
 		let field_text = document.get_first(self.category_field).unwrap().text().unwrap();
 		//println!("pos: {} text:{:?}:", self.char_position, &field_text.chars());
 		//not populated - just ignore it
-		
-		if field_text.to_ascii_uppercase().starts_with(&self.prefix) {
-			match field_text.chars().nth(self.char_position-1) {
-		    	Some(char) => {
-					self.fruit.insert(char.to_ascii_uppercase(), self.fruit.get(&char.to_ascii_uppercase()).unwrap_or(&0) + 1)
-				},
-		    	None => None
-			};
-		}
+		self.fruit.insert(field_text.to_string(), self.fruit.get(field_text).unwrap_or(&0) + 1);
 	}
 
 	fn harvest(self) -> Self::Fruit {
