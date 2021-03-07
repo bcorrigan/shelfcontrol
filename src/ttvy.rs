@@ -310,14 +310,17 @@ impl TantivyReader {
 		let cats = searcher.search(&query, &fld_collector)?;
 
 		let mut cats_vec:Vec<Category> = cats.iter().map(|(k,v)| {
-			println!("k,v:{},{}",k,v);
-			Category {
-				prefix: { 
-						k.to_string()
-					}, 
-				count: *v
+			if k.to_ascii_lowercase().starts_with(&prefix) {
+				Some(Category {
+					prefix: { 
+							k.to_string()
+						}, 
+					count: *v
+				})
+			} else {
+				None
 			}
-		}).collect();
+		}).filter(|c| c.is_some()).map(|c| c.unwrap()).collect();
 
 		cats_vec.sort_by(|a,b| a.prefix.cmp(&b.prefix));
 

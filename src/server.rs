@@ -144,7 +144,7 @@ impl Server {
 
 						//populate OpdsCategory navs, for each search result
 						let navs:Vec<OpdsCategory> = search_result.categories.iter().map(|cat| {
-							let url = if cat.count>200 {
+							let url = if cat.count>1000 {
 									format!("/opds/authors?categorise={}", cat.prefix.trim())
 								} else {
 									format!("/opds/authors?categorise={}&byAuthor=true", cat.prefix.trim())
