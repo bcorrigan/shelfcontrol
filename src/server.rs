@@ -145,7 +145,7 @@ impl Server {
 						//populate OpdsCategory navs, for each search result
 						let navs:Vec<OpdsCategory> = search_result.categories.iter().map(|cat| {
 							let url = if by_author {
-									format!("/opds/books?query=\"creator:%22{}%22\"", cat.prefix.trim())
+									format!("/opds/books?query=creator:\"{}\"", cat.prefix.trim())
 								} else if cat.count>2000 {
 									format!("/opds/authors?categorise={}", cat.prefix.trim())
 								} else {
@@ -156,6 +156,20 @@ impl Server {
 
 						let mut buf = Vec::new();
 						match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"2021-01-21T10:56:30+01:00".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &None, &Some(navs)) { 
+							Ok(_) => return Response::from_data("application/xml", buf),
+							Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
+						}
+					},
+					(GET) (/opds/books) => {
+						let query_param = &request.get_param("query");
+
+						let query_str = match query_param {
+							Some(query) => query,
+							None => return self.get_json_error_response("Query error", "\"query\" should be provided when performing a query") //FIXME opds error
+						}.trim();
+
+						let mut buf = Vec::new();
+						match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"2021-01-21T10:56:30+01:00".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &self.reader.search(query_str, 0, 2000).ok(), &None) { 
 							Ok(_) => return Response::from_data("application/xml", buf),
 							Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
 						}
