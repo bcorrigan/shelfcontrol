@@ -98,6 +98,20 @@ mod test {
 
 		assert!(prefix_cats3.count == 1);
 
+		let auth_cats = reader.count_by_field("creator", "CHA").expect("Categorisation by authors should work");
+
+		assert!(auth_cats.count == 2);
+
+		let cat = auth_cats.categories.get(1).expect("Should be a 2nd category populated");
+		assert!(cat.prefix == "Charles Dickens");
+		assert!(cat.count == 2);
+
+		/*auth_cats.categories.iter().for_each(|cat| {
+			println!("Got category:{} ({})", cat.prefix, cat.count);
+		});*/
+
 		Ok(())
 	}
+
+
 }

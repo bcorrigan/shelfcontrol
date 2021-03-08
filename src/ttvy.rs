@@ -299,10 +299,11 @@ impl TantivyReader {
 
 	pub fn count_by_field(&self, field: &str,prefix: &str) -> Result<CategorySearchResult, StoreError> {
 		let searcher = self.reader.searcher();
+		let prefix = prefix.to_ascii_lowercase();
 		let fld = TantivyReader::get_field(searcher.schema(), field)?;
 
 		let fld_collector = FieldCategories::new(fld);
-		let query: Box<dyn tantivy::query::Query> = Box::new(tantivy::query::RegexQuery::from_pattern(&format!("{}.*", prefix.to_ascii_lowercase()), fld)?);
+		let query: Box<dyn tantivy::query::Query> = Box::new(tantivy::query::RegexQuery::from_pattern(&format!("{}.*", prefix), fld)?);
 		
 		//let count = searcher.search(&query, &tantivy::collector::Count)?;
 		//println!("Query {:?} returns {}", query, count);
