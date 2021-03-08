@@ -128,9 +128,9 @@ impl Server {
 							None => ("".to_string(), Some("*"))
 						};
 						
-						let results = match &request.get_param("byAuthor") {
-							Some(_) => self.reader.count_by_field("creator", &cat_str),
-							None => self.reader.categorise("creator", &cat_str, query, 100),
+						let (results, by_author) = match &request.get_param("byAuthor") {
+							Some(_) => (self.reader.count_by_field("creator", &cat_str), true),
+							None => (self.reader.categorise("creator", &cat_str, query, 100), false),
 						};
 
 						//call categorise
@@ -144,7 +144,9 @@ impl Server {
 
 						//populate OpdsCategory navs, for each search result
 						let navs:Vec<OpdsCategory> = search_result.categories.iter().map(|cat| {
-							let url = if cat.count>1000 {
+							let url = if by_author {
+									format!("/opds/books?query=\"creator:%22{}%22\"", cat.prefix.trim())
+								} else if cat.count>2000 {
 									format!("/opds/authors?categorise={}", cat.prefix.trim())
 								} else {
 									format!("/opds/authors?categorise={}&byAuthor=true", cat.prefix.trim())
