@@ -197,7 +197,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 					reader,
 					"localhost",
 					8000,
-					true,
+					false,
 					Some(value_t!(matches, "coverdir", String).unwrap_or_else(|_| ".shelfcontrol/covers".to_string())),
 				)?;
 				server.serve().expect("Could not start server.");

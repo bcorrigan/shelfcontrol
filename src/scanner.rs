@@ -139,14 +139,11 @@ fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Res
 
 	let cover_img = if use_coverdir { doc.get_cover().ok() } else { None };
 
-	let cover_mime = if use_coverdir {
+	let cover_mime = 
 		match doc.get_cover_id() {
 			Ok(cover_id) => doc.get_resource_mime(&cover_id).ok(),
 			Err(_) => None,
-		}
-	} else {
-		None
-	};
+		};
 
 	let file = match Path::new(&book_loc).canonicalize() {
 		Ok(f) => f.display().to_string(),
