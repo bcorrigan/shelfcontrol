@@ -19,6 +19,7 @@ extern crate failure;
 extern crate itertools;
 extern crate serde;
 extern crate serde_json;
+extern crate urlencoding;
 
 use clap::{App, Arg};
 use std::collections::hash_map::DefaultHasher;
