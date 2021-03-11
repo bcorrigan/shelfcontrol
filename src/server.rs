@@ -85,6 +85,17 @@ impl Server {
 							}
 						}
 					},
+					(GET) (/api/opensearch) => {
+						Response::text("<?xml version=\"1.0\" encoding=\"UTF-8\"?>  
+						<OpenSearchDescription xmlns=\"http://a9.com/-/spec/opensearch/1.1/\">
+						  <ShortName>ShelfControl</ShortName>
+						  <InputEncoding>UTF-8</InputEncoding>
+						  <OutputEncoding>UTF-8</OutputEncoding>
+						  <Image type=\"image/x-icon\" width=\"16\" height=\"16\">favicon.ico</Image>
+						  <Url type=\"application/atom+xml\" template=\"/opds/books?query={searchTerms}\"/>
+						  <Query role=\"example\" searchTerms=\"robot\"/>
+						</OpenSearchDescription>").with_additional_header("Access-Control-Allow-Origin", "*")
+					},
 					(GET) (/api/book/{id: i64}) => {
 						return match self.reader.get_book(id) {
 							Some(doc) => {

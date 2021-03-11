@@ -15,9 +15,7 @@
     <link rel="self"
           href="/opds"
           type="application/atom+xml;profile=opds-catalog;kind=navigation"/>
-    <link rel="search" title="Search"
-          href="/opds/books?query=@{searchTerms@}"
-          type="application/opensearchdescription+xml"/>
+    <link rel="search" href="/api/opensearch" type="application/opensearchdescription+xml" title="Search"/>
 
 @if let Some(navs) = &navs {
       @for nav in navs {
@@ -46,12 +44,10 @@
                   <dc:language>en_US</dc:language>
                   @if let Some(pubdate) = &book.pubdate {<dcterms:issued>@pubdate</dcterms:issued>}
                   @if let Some(publisher) = &book.publisher {<dcterms:publisher>@publisher</dcterms:publisher>}
-                  @if let Some(description) = &book.description {<summary type="text">@description</summary>}
-                  @if let Some(cover_mime) = &book.cover_mime {
-                        <link type="@cover_mime" rel="http://opds-spec.org/image" href="/img/@book.id" />
-                        <link type="@cover_mime" rel="http://opds-spec.org/image/thumbnail" href="/img/@book.id" />
-                  }
-                        <link rel="http://opds-spec.org/acquisition" href="/api/book/@book.id" type="application/epub+zip"/>
+                  @if let Some(description) = &book.description {<summary type="text/html">@description</summary>}
+                  <link type="image/jpeg" rel="http://opds-spec.org/image" href="/img/@book.id" />
+                  <link type="image/jpeg" rel="http://opds-spec.org/image/thumbnail" href="/img/@book.id" />
+                  <link rel="http://opds-spec.org/acquisition" href="/api/book/@book.id" type="application/epub+zip"/>
             </entry>
       }
 }
