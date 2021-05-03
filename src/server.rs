@@ -96,7 +96,16 @@ impl Server {
 						  <Query role=\"example\" searchTerms=\"robot\"/>
 						</OpenSearchDescription>").with_additional_header("Access-Control-Allow-Origin", "*")
 					},
-					(GET) (/api/book/{id: i64}) => {
+					(GET) (/api/book/{book: String}) => {
+						let maybe_id = if book.ends_with(".epub") {
+							&book[..book.len()-5]
+						} else {
+							&book
+						};
+						let id:i64 = match maybe_id.parse() {
+							Ok(num) => num,
+							Err(_) => {println!("Invalid book id passed to /api/book/ (not a number)"); return Response::empty_404()}
+						};
 						return match self.reader.get_book(id) {
 							Some(doc) => {
 								let mut f = match File::open(doc.file) {
