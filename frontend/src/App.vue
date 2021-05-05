@@ -138,6 +138,45 @@
                                   </template>
                                   <span>{{(book.filesize / 1048576).toFixed(2)}} Mb</span>
                                 </v-tooltip>
+                                <!--<v-tooltip bottom>-->
+                                  <!-- Make this a v-dialog and render book to it -->
+                                  <!--<template v-slot:activator="{ on, attrs }">-->
+                                    <!--<v-btn text color="orange" v-on="on" @click="readEpub(book)">Preview</v-btn>-->
+                                          <v-dialog
+                                              v-model="previewdialog"
+                                              fullscreen
+                                              hide-overlay
+                                              transition="dialog-bottom-transition"
+                                          >
+                                          <template v-slot:activator="{ on, attrs }">
+                                            <v-btn text color="orange"
+                                                  v-bind="attrs"
+                                                  v-on="on"
+                                                  @click="readEpub(book)"
+                                            >
+                                              Preview
+                                            </v-btn>
+                                          </template>
+                                            <v-card style="position: relative">
+                                              <v-layout column fill-height>
+                                              <v-toolbar dark color="primary">
+                                                <v-btn icon dark @click="previewdialog = false">
+                                                  <v-icon>mdi-close</v-icon>
+                                                </v-btn>
+                                                <v-toolbar-title>Read book</v-toolbar-title>
+                                                <v-spacer></v-spacer>
+                                              </v-toolbar>
+                                                <v-container class="fill-height">
+                                                  <div id="reader" style="height: 3000px; width: 100%" />
+                                                </v-container>
+                                              </v-layout>
+                                            </v-card>
+                                          </v-dialog>
+                                  <!--</template>
+                                  <span>Preview book</span>
+                                </v-tooltip>-->
+
+
                               </v-card-actions>
                  </v-col>
                 </v-row>
@@ -176,6 +215,8 @@
 </template>
 
 <script>
+  import { Book, Rendition } from 'epubjs';
+
   export default {
     data: () => ({
       drawer: null,
@@ -190,12 +231,15 @@
         { icon: 'help', text: 'Help' },
       ],
       coverid: 0,
+      readerKey: 0,
       books: null,
+      isReady: false,
       count: 0,
       page: 1,
       position: 0,
       lastquery: null,
       coverdialog: null,
+      //previewdialog: false,
       errorMsg: null,
       searchtext: null,
       host:"localhost"
@@ -244,6 +288,27 @@
         if(this.count==0) {
           this.errorMsg='<h3>No results for "<b>' + this.lastquery + '</b>"</h3><p/>&nbsp;<p/>&nbsp;<p/>&nbsp;<p/>&nbsp;';
         }
+      },
+      readEpub(book) {
+        //https://github.com/Janglee123/eplee/blob/db1af25ce0aafcccc9a2c3e7a9820bf8b6017b38/src/renderer/views/Reader.vue
+        var epub = new Book("http://" + this.host + ":8080/api/book/" + book.id + ".epub", { openAs: "epub" });
+        this.rendition = new Rendition(epub, {
+          manager: "continuous",
+          flow: "scrolled",
+          width: '100%',
+          height: '100%',
+        });
+        
+        this.rendition.on('rendered', (e, iframe) => {
+          iframe.iframe.contentWindow.focus()
+        });
+
+        epub.ready
+          .then(() => {
+            this.rendition.attachTo(document.getElementById('reader'));
+            this.rendition.display(1);
+            this.rendition.ready = true;
+          });
       },
       download(book) {
         this.$axios.get("http://" + this.host + ":8080/api/book/" + book.id,
