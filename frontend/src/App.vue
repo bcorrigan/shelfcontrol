@@ -167,7 +167,7 @@
                                                 <v-spacer></v-spacer>
                                               </v-toolbar>
                                                 <v-container class="fill-height">
-                                                  <div id="reader" style="height: 3000px; width: 100%" />
+                                                  <div :id="'reader_' + book.id" style="height: 3000px; width: 100%" />
                                                 </v-container>
                                               </v-layout>
                                             </v-card>
@@ -239,7 +239,7 @@
       position: 0,
       lastquery: null,
       coverdialog: null,
-      //previewdialog: false,
+      previewdialog: false,
       errorMsg: null,
       searchtext: null,
       host:"localhost"
@@ -305,7 +305,7 @@
 
         epub.ready
           .then(() => {
-            this.rendition.attachTo(document.getElementById('reader'));
+            this.rendition.attachTo(document.getElementById('reader_' + book.id));
             this.rendition.display(1);
             this.rendition.ready = true;
           });
