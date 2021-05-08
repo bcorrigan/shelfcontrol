@@ -189,6 +189,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 			.help("Use this directory for cover images. If not specified the server will just extract from epub files on demand, at some performance cost.")
 			.takes_value(true)
 			.required(false))
+		.arg(Arg::with_name("threads")
+		    .short("t")
+			.long("threads")
+			.help("Number of threads to use for scanning. Default is same as number of logical CPUs.")
+			.takes_value(true)
+			.required(false))
 		.get_matches();
 
 	if matches.is_present("search") {
@@ -230,6 +236,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	};
 
 	let dirs = values_t!(matches.values_of("directory"), String).unwrap_or_else(|_| vec![".".to_string()]);
+
+	if matches.is_present("threads") {
+		let pool_size = value_t!(matches, "threads", usize).unwrap();
+		rayon::ThreadPoolBuilder::new().num_threads(pool_size).build_global()?
+	}
 
 	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer)
 }
