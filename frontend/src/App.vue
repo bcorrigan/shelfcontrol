@@ -82,110 +82,97 @@
           >
             {{ position + 1 }}-{{ Math.min(position+20,count) }} of {{ count }} results for "{{ lastquery }}"
           </v-subheader>
-          <span v-for="(book, index) in books" :key="book.id">
-            <v-card style="word-break: normal">
-              <v-row no-gutters>
-                <v-col  cols="12" sm="6">
-              <v-flex class="py-8" >
-              <v-img
-                class="white--text"
-                height="400"
-                contain
-                style="cursor: pointer"
-                :src="'http://localhost:8080/img/' + book.id"
-                @click="coverid = book.id;  coverdialog = true">
-              </v-img>
-              </v-flex>
-              </v-col>
-              <v-col cols="12" sm="6">
-              <v-card-title style="word-break: normal">
-                <div>
-                    <h2><span class="grey--text text--darken-3">{{ book.title }}</span></h2>
-                    <span
-                      style="cursor: pointer"
-                      class="grey--text text--darken-2"
-                      @click="clicksearch('creator:&quot;' + book.creator + '&quot;')"
-                    >
-                    {{book.creator}}
-                  </span><br>
-                  <div v-html="book.description" class="text-body-1"></div>
-                  <br><br>
-                  <h5>Published <span v-if="book.moddate"><b>{{new Date(Date.parse(book.moddate)).toLocaleDateString()}}</b></span><span v-if="book.publisher"> by <b><span
+            <span v-for="(book, index) in books" :key="book.id">
+              <v-card style="word-break: normal">
+                <v-row no-gutters>
+                  <v-col  cols="12" sm="6">
+                <v-flex class="py-8" >
+                <v-img
+                  class="white--text"
+                  height="400"
+                  contain
+                  style="cursor: pointer"
+                  :src="'http://localhost:8080/img/' + book.id"
+                  @click="coverid = book.id;  coverdialog = true">
+                </v-img>
+                </v-flex>
+                </v-col>
+                <v-col cols="12" sm="6">
+                <v-card-title style="word-break: normal">
+                  <div>
+                      <h2><span class="grey--text text--darken-3">{{ book.title }}</span></h2>
+                      <span
                         style="cursor: pointer"
-                        @click="clicksearch('publisher:&quot;' + book.publisher + '&quot;')"
-                        class="grey--text text--darken-3">{{book.publisher}}</span></b></span></h5>
-                </div>
-              </v-card-title>
-                              <v-card-actions>
-                                <v-layout row wrap justify-left>
-                                  <span v-for="tag in book.subject" :key="tag">
-                                    <v-btn
-                                      small
-                                      rounded
-                                      color="grey lighten-2"
-                                      @click="clicksearch('tags:&quot;/' + tag + '&quot;')"
-                                      class="text-lowercase"
-                                      >
-                                        {{ tag }}
-                                    </v-btn> <!-- there must be some better way than this nbsp uglyness -->
-                                    &nbsp;
-                                    <v-spacer class="v-spacer">&nbsp;</v-spacer>
-                              </span>
-                              </v-layout>
-                                <v-tooltip bottom>
-                                  <template v-slot:activator="{ on }">
-                                    <v-btn text color="orange" v-on="on" @click="download(book)">Download</v-btn>
-                                  </template>
-                                  <span>{{(book.filesize / 1048576).toFixed(2)}} Mb</span>
-                                </v-tooltip>
-                                <!--<v-tooltip bottom>-->
-                                  <!-- Make this a v-dialog and render book to it -->
-                                  <!--<template v-slot:activator="{ on, attrs }">-->
-                                    <!--<v-btn text color="orange" v-on="on" @click="readEpub(book)">Preview</v-btn>-->
-                                          <v-dialog
-                                              v-model="previewdialog"
-                                              fullscreen
-                                              hide-overlay
-                                              transition="dialog-bottom-transition"
-                                          >
-                                          <template v-slot:activator="{ on, attrs }">
-                                            <v-btn text color="orange"
-                                                  v-bind="attrs"
-                                                  v-on="on"
-                                                  @click="readEpub(book)"
-                                            >
-                                              Preview
-                                            </v-btn>
-                                          </template>
-                                            <v-card style="position: relative">
-                                              <v-layout column fill-height>
-                                              <v-toolbar dark color="primary">
-                                                <v-btn icon dark @click="previewdialog = false">
-                                                  <v-icon>mdi-close</v-icon>
-                                                </v-btn>
-                                                <v-toolbar-title>Read book</v-toolbar-title>
-                                                <v-spacer></v-spacer>
-                                              </v-toolbar>
-                                                <v-container class="fill-height">
-                                                  <div :id="'reader_' + book.id" style="height: 3000px; width: 100%" />
-                                                </v-container>
-                                              </v-layout>
-                                            </v-card>
-                                          </v-dialog>
-                                  <!--</template>
-                                  <span>Preview book</span>
-                                </v-tooltip>-->
-
-
-                              </v-card-actions>
-                 </v-col>
-                </v-row>
+                        class="grey--text text--darken-2"
+                        @click="clicksearch('creator:&quot;' + book.creator + '&quot;')"
+                      >
+                      {{book.creator}}
+                    </span><br>
+                    <div v-html="book.description" class="text-body-1"></div>
+                    <br><br>
+                    <h5>Published <span v-if="book.moddate"><b>{{new Date(Date.parse(book.moddate)).toLocaleDateString()}}</b></span><span v-if="book.publisher"> by <b><span
+                          style="cursor: pointer"
+                          @click="clicksearch('publisher:&quot;' + book.publisher + '&quot;')"
+                          class="grey--text text--darken-3">{{book.publisher}}</span></b></span></h5>
+                  </div>
+                </v-card-title>
+                                <v-card-actions>
+                                  <v-layout row wrap justify-left>
+                                    <span v-for="tag in book.subject" :key="tag">
+                                      <v-btn
+                                        small
+                                        rounded
+                                        color="grey lighten-2"
+                                        @click="clicksearch('tags:&quot;/' + tag + '&quot;')"
+                                        class="text-lowercase"
+                                        >
+                                          {{ tag }}
+                                      </v-btn> <!-- there must be some better way than this nbsp uglyness -->
+                                      &nbsp;
+                                      <v-spacer class="v-spacer">&nbsp;</v-spacer>
+                                </span>
+                                </v-layout>
+                                  <v-tooltip bottom>
+                                    <template v-slot:activator="{ on }">
+                                      <v-btn text color="orange" v-on="on" @click="download(book)">Download</v-btn>
+                                    </template>
+                                    <span>{{(book.filesize / 1048576).toFixed(2)}} Mb</span>
+                                  </v-tooltip>
+                                    <v-btn text color="orange"
+                                        @click="previewdialog=true; readEpub(book)"
+                                    >
+                                    Preview
+                                  </v-btn>
+                                </v-card-actions>
+                  </v-col>
+                  </v-row>
+              </v-card>
+                <v-divider
+                  v-if="index + 1 < books.length"
+                  :key="index"
+                ></v-divider>
+              </span>
+            <v-dialog
+                v-model="previewdialog"
+                fullscreen
+                hide-overlay
+                transition="dialog-bottom-transition"
+            >
+            <v-card style="position: relative">
+              <v-layout column fill-height>
+              <v-toolbar dark color="primary">
+                <v-btn icon dark @click="previewdialog = false">
+                  <v-icon>mdi-close</v-icon>
+                </v-btn>
+                <v-toolbar-title>Read book</v-toolbar-title>
+                <v-spacer></v-spacer>
+              </v-toolbar>
+                <!--<v-container class="fill-height">-->
+                  <div id="reader" style="height: 1000px; width: 100%" />
+                <!--</v-container>-->
+              </v-layout>
             </v-card>
-              <v-divider
-                v-if="index + 1 < books.length"
-                :key="index"
-              ></v-divider>
-          </span>
+          </v-dialog>
           <v-pagination
              v-model="page"
              :length="Math.ceil(count / 20)"
@@ -291,6 +278,14 @@
       },
       readEpub(book) {
         //https://github.com/Janglee123/eplee/blob/db1af25ce0aafcccc9a2c3e7a9820bf8b6017b38/src/renderer/views/Reader.vue
+        var reader = document.getElementById('reader');
+
+        if(reader!=null) {
+          while (reader.firstChild) {
+            reader.removeChild(reader.firstChild);
+          }
+        }
+
         var epub = new Book("http://" + this.host + ":8080/api/book/" + book.id + ".epub", { openAs: "epub" });
         this.rendition = new Rendition(epub, {
           manager: "continuous",
@@ -298,14 +293,14 @@
           width: '100%',
           height: '100%',
         });
-        
+
         this.rendition.on('rendered', (e, iframe) => {
           iframe.iframe.contentWindow.focus()
         });
 
         epub.ready
           .then(() => {
-            this.rendition.attachTo(document.getElementById('reader_' + book.id));
+            this.rendition.attachTo(document.getElementById('reader'));
             this.rendition.display(1);
             this.rendition.ready = true;
           });
