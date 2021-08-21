@@ -105,6 +105,10 @@ impl From<QueryParserError> for ClientError {
 				name: "Date must have correct format".to_string(),
 				msg: "Date must have correct format".to_string(),
 			},
+			FacetFormatError(_) => ClientError {
+				name: "Facet must have correct format".to_string(),
+				msg: "Facet must have correct format".to_string(),
+			},
 		}
 	}
 }

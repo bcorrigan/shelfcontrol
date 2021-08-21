@@ -15,9 +15,9 @@ use tantivy::store::StoreReader;
 use tantivy::DocId;
 use tantivy::IndexWriter;
 use tantivy::Score;
-use tantivy::SegmentLocalId;
+use tantivy::SegmentOrdinal;
 use tantivy::SegmentReader;
-use tantivy::{Index, IndexReader, ReloadPolicy};
+use tantivy::{Index, IndexReader, ReloadPolicy, IndexSettings};
 
 use futures::executor;
 
@@ -68,12 +68,12 @@ impl<'a> TantivyWriter<'a> {
 		let pubdate = schema_builder.add_text_field("pubdate", TEXT | STORED);
 		let moddate = schema_builder.add_text_field("moddate", TEXT | STORED);
 		let cover_mime = schema_builder.add_text_field("cover_mime", TEXT | STORED);
-		let tags = schema_builder.add_facet_field("tags");
+		let tags = schema_builder.add_facet_field("tags", STORED);
 		let schema = schema_builder.build();
 		let path_dir = dir.clone();
 		let path = Path::new(&path_dir);
 		let mmap_dir = MmapDirectory::open(path)?;
-		let index = Index::create(mmap_dir, schema.clone())?;
+		let index = Index::create(mmap_dir, schema.clone(), IndexSettings::default())?;
 		let writer = index.writer(50_000_000)?;
 
 		let mut b = Builder::default();
@@ -445,7 +445,7 @@ impl<'a> Collector for AlphabeticalCategories<'a> {
 
 	type Child = AlphabeticalCategoriesSegmentCollector;
 
-	fn for_segment(&self, _: SegmentLocalId, segment_reader: &SegmentReader) -> tantivy::Result<Self::Child> {
+	fn for_segment(&self, _: SegmentOrdinal, segment_reader: &SegmentReader) -> tantivy::Result<Self::Child> {
 		Ok(AlphabeticalCategoriesSegmentCollector::new(self.char_position, self.category_field, segment_reader, self.prefix.to_owned()))
 	}
 
@@ -533,7 +533,7 @@ impl Collector for FieldCategories {
 
 	type Child = FieldCategoriesSegmentCollector;
 
-	fn for_segment(&self, _: SegmentLocalId, segment_reader: &SegmentReader) -> tantivy::Result<Self::Child> {
+	fn for_segment(&self, _: SegmentOrdinal, segment_reader: &SegmentReader) -> tantivy::Result<Self::Child> {
 		Ok(FieldCategoriesSegmentCollector::new(self.category_field, segment_reader))
 	}
 
