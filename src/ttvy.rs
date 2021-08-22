@@ -65,7 +65,7 @@ impl<'a> TantivyWriter<'a> {
 		//subject
 		let file = schema_builder.add_text_field("file", STRING | STORED);
 		let filesize = schema_builder.add_i64_field("filesize", IntOptions::default().set_stored().set_indexed());
-		let modtime = schema_builder.add_i64_field("modtime", IntOptions::default().set_stored().set_indexed());
+		let modtime = schema_builder.add_i64_field("modtime", IntOptions::default().set_stored().set_indexed().set_fast(Cardinality::SingleValue));
 		let pubdate = schema_builder.add_text_field("pubdate", TEXT | STORED);
 		let moddate = schema_builder.add_text_field("moddate", TEXT | STORED);
 		let cover_mime = schema_builder.add_text_field("cover_mime", TEXT | STORED);
@@ -74,7 +74,7 @@ impl<'a> TantivyWriter<'a> {
 		let path_dir = dir.clone();
 		let path = Path::new(&path_dir);
 		let mmap_dir = MmapDirectory::open(path)?;
-		let index_settings = IndexSettings{sort_by_field:Some(IndexSortByField{field: "moddate".to_string(), order: Order::Desc}), docstore_compression: Compressor::Lz4  };
+		let index_settings = IndexSettings{sort_by_field:Some(IndexSortByField{field: "modtime".to_string(), order: Order::Desc}), docstore_compression: Compressor::Lz4  };
 		let index = Index::create(mmap_dir, schema.clone(), index_settings)?;
 		let writer = index.writer(50_000_000)?;
 
@@ -176,7 +176,7 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 	fn commit(&mut self) -> Result<(), Box<dyn Error>> {
 		match self.index_writer.write().unwrap().commit() {
 			Ok(_) => Ok(()),
-			Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),
+			Err(e) => Err(Box::new(io::Error::new(io::ErrorKind::Other, e))),
 		}?;
 
 		match executor::block_on(self.index_writer.write().unwrap().garbage_collect_files()) {
