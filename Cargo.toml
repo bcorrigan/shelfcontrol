@@ -25,7 +25,7 @@ maplit = "1" # dead, get rid of it
 itertools = "^0.10" #only used for string.join so should look to remove
 failure = "^0.1" #deprecated - move to Anyhow or thiserror
 futures = "^0.3"
-urlencoding = "^1"
+urlencoding = "^2"
 
 [build-dependencies]
 ructe = "^0.13"
