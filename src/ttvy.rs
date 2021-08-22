@@ -14,10 +14,11 @@ use tantivy::schema::*;
 use tantivy::store::StoreReader;
 use tantivy::DocId;
 use tantivy::IndexWriter;
+use tantivy::store::Compressor;
 use tantivy::Score;
 use tantivy::SegmentOrdinal;
 use tantivy::SegmentReader;
-use tantivy::{Index, IndexReader, ReloadPolicy, IndexSettings};
+use tantivy::{Index, IndexReader, ReloadPolicy, IndexSettings, IndexSortByField, Order};
 
 use futures::executor;
 
@@ -68,12 +69,13 @@ impl<'a> TantivyWriter<'a> {
 		let pubdate = schema_builder.add_text_field("pubdate", TEXT | STORED);
 		let moddate = schema_builder.add_text_field("moddate", TEXT | STORED);
 		let cover_mime = schema_builder.add_text_field("cover_mime", TEXT | STORED);
-		let tags = schema_builder.add_facet_field("tags", STORED);
+		let tags = schema_builder.add_facet_field("tags", STORED | INDEXED);
 		let schema = schema_builder.build();
 		let path_dir = dir.clone();
 		let path = Path::new(&path_dir);
 		let mmap_dir = MmapDirectory::open(path)?;
-		let index = Index::create(mmap_dir, schema.clone(), IndexSettings::default())?;
+		let index_settings = IndexSettings{sort_by_field:Some(IndexSortByField{field: "moddate".to_string(), order: Order::Desc}), docstore_compression: Compressor::Lz4  };
+		let index = Index::create(mmap_dir, schema.clone(), index_settings)?;
 		let writer = index.writer(50_000_000)?;
 
 		let mut b = Builder::default();
