@@ -90,9 +90,12 @@ pub fn scan_dirs(
 
 							wrote += bms.len() as u64;
 
-							if let Err(e) = writer.write_epubs(bms, &mut tags) {
+							if let Err(e) = writer.write_epubs(&bms) {
 								eprintln!("Error writing batch:{}", e);
 							} else {
+								for bm in &bms {
+									bm.add_tags(&mut tags);
+								}
 								writer.commit()?;
 							}
 
@@ -113,6 +116,8 @@ pub fn scan_dirs(
 	}
 
 	report_final(total_books, wrote, *errored.lock().unwrap(), scan_start);
+
+	println!("Writing books to sqlite");
 
 	println!("Scan complete.");
 	//we commit only once at the end, this results in one segment which is much faster than 5000 segments

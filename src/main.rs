@@ -7,6 +7,7 @@ extern crate rayon;
 extern crate epub;
 extern crate tantivy;
 extern crate walkdir;
+extern crate rusqlite;
 #[macro_use]
 extern crate maplit;
 #[macro_use]
@@ -38,6 +39,7 @@ mod search_result;
 mod server;
 mod test;
 mod ttvy;
+mod sqlite;
 
 //to embed resources use rust-embed or include_str
 
@@ -149,7 +151,7 @@ impl Hash for BookMetadata {
 
 pub trait BookWriter {
 	fn write_tags(&self, tags: HashMap<String, Vec<i64>>, limit: usize) -> Result<(), Box<dyn Error>>;
-	fn write_epubs(&mut self, bms: Vec<BookMetadata>, tags: &mut HashMap<String, Vec<i64>>) -> Result<(), Box<dyn Error>>;
+	fn write_epubs(&mut self, bms: &Vec<BookMetadata>) -> Result<(), Box<dyn Error>>;
 	fn commit(&mut self) -> Result<(), Box<dyn Error>>;
 }
 
