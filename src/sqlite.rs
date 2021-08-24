@@ -12,10 +12,25 @@ impl SqlWriter {
         let conn = Connection::open(&dir)?;
 
         conn.execute(
-            "CREATE TABLE books (
-                    id  INTEGER primary key,
-                    creator TEXT,
-                    publisher TEXT
+            "CREATE TABLE authors (
+                    creator TEXT primary key,
+                    count INTEGER
+            )", 
+    [],
+        )?;
+
+        conn.execute(
+            "CREATE TABLE publishers (
+                    publisher TEXT primary key,
+                    count INTEGER
+            )", 
+    [],
+        )?;
+
+        conn.execute(
+            "CREATE TABLE tags (
+                    tag TEXT primary key,
+                    count INTEGER
             )", 
     [],
         )?;

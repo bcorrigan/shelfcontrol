@@ -61,6 +61,11 @@ pub struct BookMetadata {
 	cover_mime: Option<String>,
 }
 
+pub enum BookMetadataCategory {
+	CREATOR,
+	PUBLISHER,
+}
+
 //A navigation category (primarily for opds)
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OpdsCategory {
@@ -121,6 +126,21 @@ impl BookMetadata {
 					val.push(self.id);
 					tags.insert(tag.clone(), val);
 				}
+			}
+		}
+	}
+
+	pub fn add_counts(&self, kind:BookMetadataCategory, counts: &mut HashMap<String, u32>) {
+		let val = match kind {
+			BookMetadataCategory::CREATOR => &self.creator,
+			BookMetadataCategory::PUBLISHER => &self.publisher,
+		};
+
+		if let Some(cat) = val {
+			if counts.contains_key(cat) {
+				counts.insert(cat.to_string(), counts.get(cat).unwrap()+1);
+			} else {
+				counts.insert(cat.to_string(), 1);
 			}
 		}
 	}
