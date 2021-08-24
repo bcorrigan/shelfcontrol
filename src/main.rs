@@ -7,6 +7,7 @@ extern crate rayon;
 extern crate epub;
 extern crate tantivy;
 extern crate walkdir;
+extern crate rusqlite;
 #[macro_use]
 extern crate maplit;
 #[macro_use]
@@ -32,12 +33,15 @@ use std::process;
 
 use server::Server;
 
+use crate::sqlite::SqlWriter;
+
 mod error;
 mod scanner;
 mod search_result;
 mod server;
 mod test;
 mod ttvy;
+mod sqlite;
 
 //to embed resources use rust-embed or include_str
 
@@ -108,18 +112,18 @@ mod string {
 }
 
 impl BookMetadata {
-	pub fn add_tags(&self, tags: &mut HashMap<String, Vec<i64>>) {
+	pub fn add_tags(&self, tags: &mut HashMap<String, u32>) {
 		//add any known tags
 		if self.subject.is_some() {
-			for tag in self.subject.clone().unwrap() {
-				if tags.contains_key(&tag) {
-					tags.get_mut(&tag).unwrap().push(self.id);
-				} else {
-					let mut val = Vec::new();
-					val.push(self.id);
-					tags.insert(tag.clone(), val);
-				}
+			for tag in self.subject.as_ref().unwrap() {
+				tags.insert(tag.to_string(), tags.get(tag).unwrap_or(&0)+1);
 			}
+		}
+	}
+
+	pub fn add_counts(val:&Option<String>, counts: &mut HashMap<String, u32>) {
+		if let Some(cat) = val {
+			counts.insert(cat.to_string(), counts.get(cat).unwrap_or(&0)+1);
 		}
 	}
 
@@ -148,8 +152,7 @@ impl Hash for BookMetadata {
 }
 
 pub trait BookWriter {
-	fn write_tags(&self, tags: HashMap<String, Vec<i64>>, limit: usize) -> Result<(), Box<dyn Error>>;
-	fn write_epubs(&mut self, bms: Vec<BookMetadata>, tags: &mut HashMap<String, Vec<i64>>) -> Result<(), Box<dyn Error>>;
+	fn write_epubs(&mut self, bms: &Vec<BookMetadata>) -> Result<(), Box<dyn Error>>;
 	fn commit(&mut self) -> Result<(), Box<dyn Error>>;
 }
 
@@ -225,15 +228,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		None => (false, None),
 	};
 
+	let db_dir = value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string());
+
 	let writer: Box<dyn BookWriter + Sync + Send> = match matches.value_of("db").unwrap_or("tantivy") {
-		"tantivy" => Box::new(match ttvy::TantivyWriter::new(
-			value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string()),
-		) {
+		"tantivy" => Box::new(match ttvy::TantivyWriter::new(&db_dir) {
 			Ok(writer) => Ok(writer),
 			Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),
 		}?),
 		_ => process::exit(2),
 	};
+
+	let sqlite_writer = SqlWriter::new(&format!("{}/counts.sqlite", &db_dir))?;
 
 	let dirs = values_t!(matches.values_of("directory"), String).unwrap_or_else(|_| vec![".".to_string()]);
 
@@ -242,5 +247,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		rayon::ThreadPoolBuilder::new().num_threads(pool_size).build_global()?
 	}
 
-	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer)
+	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer, sqlite_writer)
 }

@@ -13,6 +13,7 @@ epub = { git = "https://github.com/danigm/epub-rs" }
 #rusqlite = "0.15.0"
 clap = "^2"
 tantivy = "^0.15"
+rusqlite = "^0.25"
 rayon = "^1.5"
 walkdir = "^2" 
 chrono = "^0.4" #not that well maintained tho not dead - maybe roll own

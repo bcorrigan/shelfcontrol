@@ -47,7 +47,7 @@ pub struct TantivyWriter<'a> {
 }
 
 impl<'a> TantivyWriter<'a> {
-	pub fn new(dir: String) -> Result<TantivyWriter<'a>, tantivy::TantivyError> {
+	pub fn new(dir: &String) -> Result<TantivyWriter<'a>, tantivy::TantivyError> {
 		if Path::new(&dir).exists() {
 			println!("Error: Must remove directory {} to run.", &dir);
 			process::exit(3);
@@ -126,36 +126,30 @@ impl<'a> TantivyWriter<'a> {
 }
 
 impl<'a> BookWriter for TantivyWriter<'a> {
-	fn write_tags(&self, _tags: HashMap<String, Vec<i64>>, _limit: usize) -> Result<(), Box<dyn Error>> {
-		//not sure if facets can be added later in tantivy??
-		Ok(())
-	}
-
-	fn write_epubs(&mut self, bms: Vec<BookMetadata>, tags: &mut HashMap<String, Vec<i64>>) -> Result<(), Box<dyn Error>> {
+	fn write_epubs(&mut self, bms: &Vec<BookMetadata>) -> Result<(), Box<dyn Error>> {
+		let empty_str = String::new();
 		for bm in bms {
-			bm.add_tags(tags);
-
 			let mut ttdoc = Document::default();
 			ttdoc.add_i64(self.id, bm.id);
-			ttdoc.add_text(self.title, &bm.title.unwrap_or_else(|| "".to_string()));
+			ttdoc.add_text(self.title, bm.title.as_ref().unwrap_or(&empty_str));
 			ttdoc.add_text(
 				self.description,
 				self.sanitiser
-					.clean(&bm.description.unwrap_or_else(|| "".to_string()))
+					.clean(bm.description.as_ref().unwrap_or(&empty_str))
 					.to_string()
 					.as_str(),
 			);
-			ttdoc.add_text(self.publisher, &bm.publisher.unwrap_or_else(|| "".to_string()));
-			ttdoc.add_text(self.creator, &bm.creator.unwrap_or_else(|| "".to_string()));
+			ttdoc.add_text(self.publisher, bm.publisher.as_ref().unwrap_or(&empty_str));
+			ttdoc.add_text(self.creator, bm.creator.as_ref().unwrap_or(&empty_str));
 			ttdoc.add_text(self.file, &bm.file);
 			ttdoc.add_i64(self.filesize, bm.filesize);
 			ttdoc.add_i64(self.modtime, bm.modtime);
-			ttdoc.add_text(self.pubdate, &bm.pubdate.unwrap_or_else(|| "".to_string()));
-			ttdoc.add_text(self.moddate, &bm.moddate.unwrap_or_else(|| "".to_string()));
-			ttdoc.add_text(self.cover_mime, &bm.cover_mime.unwrap_or_else(|| "".to_string()));
+			ttdoc.add_text(self.pubdate, bm.pubdate.as_ref().unwrap_or(&empty_str));
+			ttdoc.add_text(self.moddate, &bm.moddate.as_ref().unwrap_or(&empty_str));
+			ttdoc.add_text(self.cover_mime, &bm.cover_mime.as_ref().unwrap_or(&empty_str));
 
 			if bm.subject.is_some() {
-				for subject in &bm.subject.unwrap() {
+				for subject in bm.subject.as_ref().unwrap() {
 					if !&subject.trim().is_empty() {
 						//println!("Making facet from: {}", &subject);
 						let mut tag = "/".to_string();

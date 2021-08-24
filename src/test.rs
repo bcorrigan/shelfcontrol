@@ -3,6 +3,7 @@ mod test {
 
 	use crate::scanner;
 	use crate::ttvy;
+	use crate::SqlWriter;
 	use std::fs;
 	use std::io::Error;
 	use crate::error::StoreError;
@@ -19,9 +20,11 @@ mod test {
 
 	fn get_reader() -> Result<ttvy::TantivyReader, Error> {
     	fs::create_dir("target/images")?;
+		let db_dir = &"target/index".to_string();
+    	let writer = ttvy::TantivyWriter::new(db_dir).unwrap();
+		let sql_writer = SqlWriter::new(&format!("{}/counts.sqlite", &db_dir)).unwrap();
 
-    	let writer = ttvy::TantivyWriter::new("target/index".to_string()).unwrap();
-    	scanner::scan_dirs(["test/library".to_string()].to_vec(), Some("target/images"), true, Box::new(writer)).expect("Scanner failed");
+    	scanner::scan_dirs(["test/library".to_string()].to_vec(), Some("target/images"), true, Box::new(writer), sql_writer).expect("Scanner failed");
     	let reader = ttvy::TantivyReader::new("target/index".to_string()).expect("Reader failed");
     	Ok(reader)
 	}
