@@ -47,7 +47,7 @@ pub struct TantivyWriter<'a> {
 }
 
 impl<'a> TantivyWriter<'a> {
-	pub fn new(dir: String) -> Result<TantivyWriter<'a>, tantivy::TantivyError> {
+	pub fn new(dir: &String) -> Result<TantivyWriter<'a>, tantivy::TantivyError> {
 		if Path::new(&dir).exists() {
 			println!("Error: Must remove directory {} to run.", &dir);
 			process::exit(3);
@@ -126,11 +126,6 @@ impl<'a> TantivyWriter<'a> {
 }
 
 impl<'a> BookWriter for TantivyWriter<'a> {
-	fn write_tags(&self, _tags: HashMap<String, Vec<i64>>, _limit: usize) -> Result<(), Box<dyn Error>> {
-		//not sure if facets can be added later in tantivy??
-		Ok(())
-	}
-
 	fn write_epubs(&mut self, bms: &Vec<BookMetadata>) -> Result<(), Box<dyn Error>> {
 		let empty_str = String::new();
 		for bm in bms {

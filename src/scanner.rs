@@ -13,14 +13,17 @@ use std::process;
 use std::time::SystemTime;
 use walkdir::WalkDir;
 
-use crate::BookMetadata;
+use crate::sqlite::SqlWriter;
+use crate::{BookMetadata};
 use crate::BookWriter;
 
+//TODO move these params to struct & pass struct instead
 pub fn scan_dirs(
 	dirs: Vec<String>,
 	coverdir: Option<&str>,
 	use_coverdir: bool,
 	mut writer: Box<dyn BookWriter + Send + Sync>,
+	sqlite_writer: SqlWriter,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	for directory in &dirs {
 		if !Path::new(&directory).exists() {
@@ -48,6 +51,8 @@ pub fn scan_dirs(
 
 	//TODO make this a bookkeeping struct
 	let mut tags = HashMap::new();
+	let mut creator_counts = HashMap::new();
+	let mut publisher_counts = HashMap::new();
 	let seen_bookids = std::sync::RwLock::new(HashSet::new());
 	let mut wrote: u64 = 0;
 	let errored = std::sync::Mutex::new(0);
@@ -95,6 +100,8 @@ pub fn scan_dirs(
 							} else {
 								for bm in &bms {
 									bm.add_tags(&mut tags);
+									BookMetadata::add_counts(&bm.creator, &mut creator_counts);
+									BookMetadata::add_counts(&bm.publisher, &mut publisher_counts);
 								}
 								writer.commit()?;
 							}
@@ -117,14 +124,17 @@ pub fn scan_dirs(
 
 	report_final(total_books, wrote, *errored.lock().unwrap(), scan_start);
 
-	println!("Writing books to sqlite");
+	println!("Writing counts to sqlite - {} creators, {} publishers, {} tags", creator_counts.len(), publisher_counts.len(), tags.len());
+	sqlite_writer.write_creator_counts(creator_counts)?;
+	sqlite_writer.write_publisher_counts(publisher_counts)?;
+	sqlite_writer.write_tag_counts(tags)?;
 
 	println!("Scan complete.");
 	//we commit only once at the end, this results in one segment which is much faster than 5000 segments
 	//writer.commit()?;
 	println!("Index created and garbage collected");
 
-	writer.write_tags(tags, 10)
+	Ok(())
 }
 
 fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<dyn Error>> {
