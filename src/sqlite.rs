@@ -1,5 +1,7 @@
+use itertools::Itertools;
 use rusqlite::{params, Connection, Result};
 use std::collections::HashMap;
+use crate::TagCount;
 
 pub struct SqlWriter {
     conn: Connection
@@ -67,4 +69,23 @@ impl SqlWriter {
         }
         Ok(())
     }
+
+    pub fn get_tags(&self, order_by_count:bool, desc:bool, offset:u32, count:u32, filter:Option<String>) -> Result<Vec<TagCount>, rusqlite::Error> {
+        let where_clause = if filter.is_some() {" where tag like ?"} else {""};
+        let order_by = if order_by_count {" order by count"} else {" order by tag"};
+        let ascdesc = if desc { " DESC" } else { " ASC" };
+        let mut stmt = self.conn.prepare(&format!("select * from tags {} {} {} limit {}, {}", where_clause, order_by, ascdesc, offset, count))?;
+        let x:Vec<TagCount> = stmt.query_map(params![filter.unwrap_or(String::new())], |row| {
+            Ok(TagCount {
+                tag: row.get(0)?,
+                count: row.get(1)?,
+            })
+        })?.filter_map(|t| t.ok()).collect();
+        
+        Ok(x)
+    }
+    /*handy queries
+    select * from tags where tag like "%lovecraft%" order by count desc limit 20,20;
+    limit term is skip,count
+    */
 }

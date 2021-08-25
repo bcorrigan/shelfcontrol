@@ -62,6 +62,24 @@ pub struct BookMetadata {
 	moddate: Option<String>,
 	cover_mime: Option<String>,
 }
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AuthorCount {
+	creator: String,
+	count:u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct PublisherCount {
+	publisher: String,
+	count:u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TagCount {
+	tag: String,
+	count:u32,
+}
+
 
 //A navigation category (primarily for opds)
 #[derive(Debug, Serialize, Deserialize)]
