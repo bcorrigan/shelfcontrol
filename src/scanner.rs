@@ -13,7 +13,7 @@ use std::process;
 use std::time::SystemTime;
 use walkdir::WalkDir;
 
-use crate::sqlite::SqlWriter;
+use crate::sqlite::Sqlite;
 use crate::{BookMetadata};
 use crate::BookWriter;
 
@@ -23,7 +23,7 @@ pub fn scan_dirs(
 	coverdir: Option<&str>,
 	use_coverdir: bool,
 	mut writer: Box<dyn BookWriter + Send + Sync>,
-	sqlite_writer: SqlWriter,
+	sqlite_writer: Sqlite,
 ) -> Result<(), Box<dyn std::error::Error>> {
 	for directory in &dirs {
 		if !Path::new(&directory).exists() {

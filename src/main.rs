@@ -33,7 +33,7 @@ use std::process;
 
 use server::Server;
 
-use crate::sqlite::SqlWriter;
+use crate::sqlite::Sqlite;
 
 mod error;
 mod scanner;
@@ -218,11 +218,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 			.required(false))
 		.get_matches();
 
+	let db_dir = value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string());
+	let sqlite = Sqlite::new(&format!("{}/counts.sqlite", &db_dir))?;
+
 	if matches.is_present("search") {
 		match ttvy::TantivyReader::new(value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string())) {
 			Ok(reader) => {
 				let server = Server::new(
 					reader,
+					sqlite,
 					"localhost",
 					8000,
 					false,
@@ -246,8 +250,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		None => (false, None),
 	};
 
-	let db_dir = value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string());
-
 	let writer: Box<dyn BookWriter + Sync + Send> = match matches.value_of("db").unwrap_or("tantivy") {
 		"tantivy" => Box::new(match ttvy::TantivyWriter::new(&db_dir) {
 			Ok(writer) => Ok(writer),
@@ -256,8 +258,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		_ => process::exit(2),
 	};
 
-	let sqlite_writer = SqlWriter::new(&format!("{}/counts.sqlite", &db_dir))?;
-
 	let dirs = values_t!(matches.values_of("directory"), String).unwrap_or_else(|_| vec![".".to_string()]);
 
 	if matches.is_present("threads") {
@@ -265,5 +265,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		rayon::ThreadPoolBuilder::new().num_threads(pool_size).build_global()?
 	}
 
-	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer, sqlite_writer)
+	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer, sqlite)
 }

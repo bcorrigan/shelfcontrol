@@ -1,3 +1,4 @@
+use crate::sqlite::Sqlite;
 use crate::ttvy::TantivyReader;
 
 use epub::doc::EpubDoc;
@@ -19,6 +20,7 @@ include!(concat!(env!("OUT_DIR"), "/templates.rs"));
 
 pub struct Server {
 	pub reader: TantivyReader,
+	pub sqlite: Sqlite,
 	pub host: String,
 	pub port: u32,
 	pub use_coverdir: bool,
@@ -39,9 +41,10 @@ impl fmt::Display for ServerError {
 }
 
 impl Server {
-	pub fn new(reader: TantivyReader, host: &str, port: u32, use_coverdir: bool, coverdir: Option<String>) -> Result<Server, ServerError> {
+	pub fn new(reader: TantivyReader, sqlite: Sqlite, host: &str, port: u32, use_coverdir: bool, coverdir: Option<String>) -> Result<Server, ServerError> {
 		Ok(Server {
 			reader,
+			sqlite,
 			host: host.to_string(),
 			port,
 			use_coverdir,
@@ -84,6 +87,25 @@ impl Server {
 								}
 							}
 						}
+					},
+					(GET) (/api/counts/{kind: String}) => {
+						let query_param = &request.get_param("query");
+						let query_str = match query_param {
+							Some(query) => query,
+							None => return self.get_json_error_response("Query error", "\"query\" should be provided when performing a query")
+						}.trim();
+
+						let start = match request.get_param("start").unwrap_or_else(|| "0".to_string()).parse::<usize>() {
+							Ok(start) => start,
+							Err(_) => return self.get_json_error_response("Type error", "\"start\" should have an integer argument"),
+						};
+
+						let limit = match request.get_param("limit").unwrap_or_else(|| "100".to_string()).parse::<usize>() {
+							Ok(lim) => lim,
+							Err(_) => return self.get_json_error_response("Type error", "\"limit\" should have an integer argument"),
+						};
+
+						Response::empty_404()
 					},
 					(GET) (/api/opensearch) => {
 						Response::text("<?xml version=\"1.0\" encoding=\"UTF-8\"?>  
