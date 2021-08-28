@@ -6,6 +6,7 @@ use epub::doc::EpubDoc;
 use crate::error::ClientError;
 use crate::error::StoreError;
 use rouille::Response;
+use std::convert::TryInto;
 use std::fmt;
 use std::fs::File;
 use std::io;
@@ -89,11 +90,8 @@ impl Server {
 						}
 					},
 					(GET) (/api/counts/{kind: String}) => {
-						let query_param = &request.get_param("query");
-						let query_str = match query_param {
-							Some(query) => query,
-							None => return self.get_json_error_response("Query error", "\"query\" should be provided when performing a query")
-						}.trim();
+						let filter = request.get_param("query").map(|s| s.trim().to_string());
+						//let filter = query_param. ;
 
 						let start = match request.get_param("start").unwrap_or_else(|| "0".to_string()).parse::<usize>() {
 							Ok(start) => start,
@@ -103,6 +101,42 @@ impl Server {
 						let limit = match request.get_param("limit").unwrap_or_else(|| "100".to_string()).parse::<usize>() {
 							Ok(lim) => lim,
 							Err(_) => return self.get_json_error_response("Type error", "\"limit\" should have an integer argument"),
+						};
+
+						let order = match request.get_param("countorder") {
+							Some(orderby) => {
+								if orderby=="true" {
+									true
+								} else if orderby=="false" {
+									false
+								} else {
+									return self.get_json_error_response("Type error", "\"countorder\" should be true or false")
+								}
+							},
+							None => false,
+						};
+
+						let asc = match request.get_param("ascending") {
+							Some(ascending) => {
+								if ascending=="true" {
+									true
+								} else if ascending=="false" {
+									false
+								} else {
+									return self.get_json_error_response("Type error", "\"ascending\" should be true or false")
+								}
+							},
+							None => false,
+						};
+
+						let results = match kind.as_str() {
+							"tags" => {
+								match self.sqlite.get_tags(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
+									Ok(res) => res,
+									Err(_) => return self.get_json_error_response("Tags error", "Unable to query tag counts")
+								}
+							},
+							_ => return Response::empty_404()
 						};
 
 						Response::empty_404()

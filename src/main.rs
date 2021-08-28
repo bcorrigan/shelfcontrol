@@ -7,6 +7,8 @@ extern crate rayon;
 extern crate epub;
 extern crate tantivy;
 extern crate walkdir;
+extern crate r2d2;
+extern crate r2d2_sqlite;
 extern crate rusqlite;
 #[macro_use]
 extern crate maplit;
@@ -219,9 +221,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.get_matches();
 
 	let db_dir = value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string());
-	let sqlite = Sqlite::new(&format!("{}/counts.sqlite", &db_dir))?;
 
 	if matches.is_present("search") {
+		let sqlite = Sqlite::new(&format!("{}/counts.sqlite", &db_dir))?;
 		match ttvy::TantivyReader::new(value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string())) {
 			Ok(reader) => {
 				let server = Server::new(
@@ -265,5 +267,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		rayon::ThreadPoolBuilder::new().num_threads(pool_size).build_global()?
 	}
 
+	let sqlite = Sqlite::new(&format!("{}/counts.sqlite", &db_dir))?;
 	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer, sqlite)
 }
