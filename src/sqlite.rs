@@ -11,10 +11,7 @@ pub struct Sqlite {
 impl Sqlite {
     pub fn new(dir: &String) -> Result<Sqlite, rusqlite::Error> {
         let manager = SqliteConnectionManager::file(dir);
-        let conn = Connection::open(&dir)?;
         let pool = r2d2::Pool::new(manager).unwrap();
-
-
 
         Ok(Sqlite { 
             pool

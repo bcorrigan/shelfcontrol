@@ -231,7 +231,7 @@ impl TantivyReader {
 	}
 
 	//    /api/search
-	pub fn search(&self, query: &str, start: usize, limit: usize) -> Result<SearchResult, StoreError> {
+	pub fn search(&self, query: &str, start: usize, limit: usize) -> Result<SearchResult<BookMetadata>, StoreError> {
 		let searcher = &self.reader.searcher();
 
 		let tquery = &self.query_parser.parse_query(query)?;
@@ -256,7 +256,7 @@ impl TantivyReader {
 			count,
 			start,
 			query: query.to_string(),
-			books,
+			payload: books,
 		})
 	}
 

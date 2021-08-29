@@ -6,7 +6,6 @@ mod test {
 	use crate::Sqlite;
 	use std::fs;
 	use std::io::Error;
-	use crate::error::StoreError;
 	use std::{thread, time};
 
 	struct DirsCleanup;
@@ -45,7 +44,7 @@ mod test {
 
 		result = reader.search("creator:\"Thomas de Quincey\"", 0, 10).expect("Search failed");
 		assert!(result.count == 1);
-		let book = result.books.get(0).unwrap();
+		let book = result.payload.get(0).unwrap();
 		println!("{}", book.creator.as_ref().unwrap());
 		assert!(book.creator.as_ref().unwrap() == "Thomas De Quincey");
 		assert!(book.filesize == 115227);

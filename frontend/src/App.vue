@@ -238,7 +238,7 @@
       this.host = window.location.hostname;
       this.$axios
         .get('http://' + this.host + ':8080/api/search?query=*&limit=20')
-        .then(response => (this.books = response.data.books , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position));
+        .then(response => (this.books = response.data.payload , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position));
     },
     methods: {
       dosearchof (param) {
@@ -248,7 +248,7 @@
         this.$axios
         .get('http://' + this.host + ':8080/api/search?query=' + param + '&limit=20&start='+ ((this.page-1)*20))
         .then(response =>
-          (this.books = response.data.books,
+          (this.books = response.data.payload,
           this.count = response.data.count,
           this.lastquery = response.data.query,
           this.position = response.data.position,

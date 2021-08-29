@@ -125,6 +125,7 @@ pub fn scan_dirs(
 	report_final(total_books, wrote, *errored.lock().unwrap(), scan_start);
 
 	println!("Writing counts to sqlite - {} creators, {} publishers, {} tags", creator_counts.len(), publisher_counts.len(), tags.len());
+	sqlite_writer.create_tables()?;
 	sqlite_writer.write_creator_counts(creator_counts)?;
 	sqlite_writer.write_publisher_counts(publisher_counts)?;
 	sqlite_writer.write_tag_counts(tags)?;
