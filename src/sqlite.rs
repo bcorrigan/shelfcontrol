@@ -126,5 +126,13 @@ impl Sqlite {
     /*handy queries
     select * from tags where tag like "%lovecraft%" order by count desc limit 20,20;
     limit term is skip,count
+
+    What if we want the total count when limited?
+
+    try window function:
+
+    select *, count(*) OVER() as full_count from tags where tag like "%lovecraft%" order by count desc limit 20,20;
+
+    This seems to be pretty fast and does it in one query.
     */
 }

@@ -47,7 +47,7 @@ mod sqlite;
 
 //to embed resources use rust-embed or include_str
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct BookMetadata {
 	#[serde(with = "string")]
 	id: i64,
@@ -64,19 +64,19 @@ pub struct BookMetadata {
 	moddate: Option<String>,
 	cover_mime: Option<String>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct AuthorCount {
 	creator: String,
 	count:u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct PublisherCount {
 	publisher: String,
 	count:u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct TagCount {
 	tag: String,
 	count:u32,
@@ -84,7 +84,7 @@ pub struct TagCount {
 
 
 //A navigation category (primarily for opds)
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct OpdsCategory {
 	id: i64,
 	moddate: String,
