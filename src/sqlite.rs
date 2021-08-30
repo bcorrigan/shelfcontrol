@@ -5,7 +5,7 @@ use serde::Serialize;
 use std::collections::HashMap;
 use crate::{TagCount, AuthorCount, PublisherCount};
 use crate::search_result::SearchResult;
-trait DbInfo<T: std::fmt::Debug + Serialize> {
+pub trait DbInfo<T: std::fmt::Debug + Serialize> {
     fn new(key:String, count: u32) -> T;
 	fn get_table() -> String;
 	fn get_pkcol() -> String;
@@ -104,31 +104,11 @@ impl Sqlite {
         Ok(())
     }
 
-    pub fn write_creator_counts(&self, creator_counts: HashMap<String, u32>) -> Result<(), rusqlite::Error> {
-        for (creator, count) in creator_counts {
+    pub fn write_counts<T: DbInfo<T> + std::fmt::Debug + Serialize>(&self, counts: HashMap<String, u32>) -> Result<(), rusqlite::Error> {
+        for (key, count) in counts {
             self.pool.get().unwrap().execute(
-                "INSERT INTO authors(creator, count) values (?1, ?2)",
-                params![creator,count],
-            )?;
-        }
-        Ok(())
-    }
-
-    pub fn write_publisher_counts(&self, publisher_counts: HashMap<String, u32>) -> Result<(), rusqlite::Error> {
-        for (publisher, count) in publisher_counts {
-            self.pool.get().unwrap().execute(
-                "INSERT INTO publishers(publisher, count) values (?1, ?2)",
-                params![publisher,count],
-            )?;
-        }
-        Ok(())
-    }
-
-    pub fn write_tag_counts(&self, tag_counts: HashMap<String, u32>) -> Result<(), rusqlite::Error> {
-        for (tag, count) in tag_counts {
-            self.pool.get().unwrap().execute(
-                "INSERT INTO tags(tag, count) values (?1, ?2)",
-                params![tag,count],
+                &format!("INSERT INTO {}({}, count) values (?1, ?2)", T::get_table(), T::get_pkcol()),
+                params![key,count],
             )?;
         }
         Ok(())

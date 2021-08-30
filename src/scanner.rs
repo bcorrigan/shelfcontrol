@@ -14,7 +14,7 @@ use std::time::SystemTime;
 use walkdir::WalkDir;
 
 use crate::sqlite::Sqlite;
-use crate::{BookMetadata};
+use crate::{AuthorCount, BookMetadata, PublisherCount, TagCount};
 use crate::BookWriter;
 
 //TODO move these params to struct & pass struct instead
@@ -126,9 +126,9 @@ pub fn scan_dirs(
 
 	println!("Writing counts to sqlite - {} creators, {} publishers, {} tags", creator_counts.len(), publisher_counts.len(), tags.len());
 	sqlite_writer.create_tables()?;
-	sqlite_writer.write_creator_counts(creator_counts)?;
-	sqlite_writer.write_publisher_counts(publisher_counts)?;
-	sqlite_writer.write_tag_counts(tags)?;
+	sqlite_writer.write_counts::<AuthorCount>(creator_counts)?;
+	sqlite_writer.write_counts::<PublisherCount>(publisher_counts)?;
+	sqlite_writer.write_counts::<TagCount>(tags)?;
 
 	println!("Scan complete.");
 	//we commit only once at the end, this results in one segment which is much faster than 5000 segments
