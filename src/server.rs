@@ -130,29 +130,27 @@ impl Server {
 							None => false,
 						};
 
-						match kind.as_str() {
+						return match kind.as_str() {
 							"tags" => {
 								match self.sqlite.get_counts::<TagCount>(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
-									Ok(res) => return Response::from_data("application/json", res.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
-									Err(_) => return self.get_json_error_response("Tags error", "Unable to query tag counts")
+									Ok(res) => Response::from_data("application/json", res.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
+									Err(_) => self.get_json_error_response("Tags error", "Unable to query tag counts").with_status_code(500)
 								}
 							},
 							"authors" => {
 								match self.sqlite.get_counts::<AuthorCount>(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
-									Ok(res) => return Response::from_data("application/json", res.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
-									Err(_) => return self.get_json_error_response("Authors error", "Unable to query author counts")
+									Ok(res) => Response::from_data("application/json", res.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
+									Err(_) => self.get_json_error_response("Authors error", "Unable to query author counts").with_status_code(500)
 								}
 							},
 							"publishers" => {
 								match self.sqlite.get_counts::<PublisherCount>(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
-									Ok(res) => return Response::from_data("application/json", res.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
-									Err(_) => return self.get_json_error_response("Publisher error", "Unable to query publisher counts")
+									Ok(res) => Response::from_data("application/json", res.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
+									Err(_) => self.get_json_error_response("Publisher error", "Unable to query publisher counts").with_status_code(500)
 								}
 							},
-							_ => return Response::empty_404()
+							_ => Response::empty_404()
 						};
-
-						Response::empty_404()
 					},
 					(GET) (/api/opensearch) => {
 						Response::text("<?xml version=\"1.0\" encoding=\"UTF-8\"?>  
