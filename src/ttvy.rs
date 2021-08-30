@@ -255,7 +255,7 @@ impl TantivyReader {
 		Ok(SearchResult {
 			count,
 			start,
-			query: query.to_string(),
+			query: Some(query.to_string()),
 			payload: books,
 		})
 	}

@@ -8,7 +8,7 @@ use crate::error::ClientError;
 pub struct SearchResult<T: Debug + serde::Serialize> {
 	pub count: usize,
 	pub start: usize,
-	pub query: String,
+	pub query: Option<String>,
 	pub payload: Vec<T>,
 }
 
@@ -34,11 +34,15 @@ pub struct OpdsPage {
 
 impl<T: Debug + serde::Serialize> SearchResult<T> {
 	pub fn to_json(&self) -> String {
+		let query_str = match self.query.as_ref() {
+			Some(q) => format!("\"query\":\"{}\",", q.replace("\"", "\\\"")),
+			None => String::new(),
+		};
 		let mut json_str: String = format!(
 			"{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[",
 			self.count,
 			self.start,
-			self.query.replace("\"", "\\\"")
+			query_str,
 		)
 		.to_string();
 

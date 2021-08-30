@@ -3,6 +3,7 @@ use r2d2_sqlite::SqliteConnectionManager;
 use r2d2::Pool;
 use std::collections::HashMap;
 use crate::{TagCount, AuthorCount, PublisherCount};
+use crate::search_result::SearchResult;
 
 pub struct Sqlite {
     pool: Pool<SqliteConnectionManager>,
@@ -81,20 +82,29 @@ impl Sqlite {
         let where_clause = if where_clause {format!(" where {} like ?", field)} else {"".to_string()};
         let order_by = if order_by_count {" order by count".to_string()} else {format!(" order by {}", field)};
         let ascdesc = if desc { " DESC" } else { " ASC" };
-        format!("select * from {} {} {} {} limit {}, {}", table, where_clause, order_by, ascdesc, offset, count)
+        format!("select *, count(*) OVER() from {} {} {} {} limit {}, {}", table, where_clause, order_by, ascdesc, offset, count)
     }
 
-    pub fn get_tags(&self, order_by_count:bool, desc:bool, offset:u32, count:u32, filter:Option<String>) -> Result<Vec<TagCount>, rusqlite::Error> {
+    pub fn get_tags(&self, order_by_count:bool, desc:bool, offset:u32, count:u32, filter:Option<String>) -> Result<SearchResult<TagCount>, rusqlite::Error> {
         let conn = self.pool.get().unwrap();
         let mut stmt = conn.prepare(&self.get_count_sql(order_by_count, desc, filter.is_some(), offset, count, "tags", "tag"))?;
-        let x:Vec<TagCount> = stmt.query_map(params![filter.unwrap_or(String::new())], |row| {
+        let mut fullcount=0;
+        let payload:Vec<TagCount> = stmt.query_map(params![filter.as_ref().unwrap_or(&String::new())], |row| {
+            if fullcount!=0 {
+                fullcount=row.get(3)?;
+            }
             Ok(TagCount {
                 tag: row.get(0)?,
                 count: row.get(1)?,
             })
         })?.filter_map(|t| t.ok()).collect();
-        
-        Ok(x)
+
+        Ok(SearchResult {
+            count: fullcount,
+            start: offset as usize,
+            query: filter,
+            payload,
+        })
     }
 
     pub fn get_authors(&self, order_by_count:bool, desc:bool, offset:u32, count:u32, filter:Option<String>) -> Result<Vec<AuthorCount>, rusqlite::Error> {
