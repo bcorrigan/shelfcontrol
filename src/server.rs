@@ -14,6 +14,7 @@ use std::io::prelude::*;
 
 use crate::search_result::OpdsPage;
 use crate::OpdsCategory;
+use crate::TagCount;
 
 use urlencoding::encode;
 
@@ -131,7 +132,7 @@ impl Server {
 
 						let results = match kind.as_str() {
 							"tags" => {
-								match self.sqlite.get_tags(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
+								match self.sqlite.get_counts::<TagCount>(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
 									Ok(res) => res,
 									Err(_) => return self.get_json_error_response("Tags error", "Unable to query tag counts")
 								}

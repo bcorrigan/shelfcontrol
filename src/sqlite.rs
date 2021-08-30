@@ -1,9 +1,65 @@
 use rusqlite::{params, Connection, Result};
 use r2d2_sqlite::SqliteConnectionManager;
 use r2d2::Pool;
+use serde::Serialize;
 use std::collections::HashMap;
 use crate::{TagCount, AuthorCount, PublisherCount};
 use crate::search_result::SearchResult;
+trait DbInfo<T: std::fmt::Debug + Serialize> {
+    fn new(key:String, count: u32) -> T;
+	fn get_table() -> String;
+	fn get_pkcol() -> String;
+}
+
+impl DbInfo<AuthorCount> for AuthorCount {
+    fn new(key:String, count:u32) -> AuthorCount {
+        AuthorCount {
+            creator: key,
+            count,
+        }
+    }
+
+	fn get_table() -> String {
+		"authors".to_string()
+	}
+
+	fn get_pkcol() -> String {
+		"creator".to_string()
+	}
+}
+
+impl DbInfo<TagCount> for TagCount {
+    fn new(key:String, count:u32) -> TagCount {
+        TagCount {
+            tag: key,
+            count,
+        }
+    }
+
+	fn get_table() -> String {
+		"tags".to_string()
+	}
+
+	fn get_pkcol() -> String {
+		"tag".to_string()
+	}
+}
+
+impl DbInfo<PublisherCount> for PublisherCount {
+    fn new(key:String, count:u32) -> PublisherCount {
+        PublisherCount {
+            publisher: key,
+            count,
+        }
+    }
+    fn get_table() -> String {
+        "publishers".to_string()
+    }
+
+    fn get_pkcol() -> String {
+        "publisher".to_string()
+    }
+}
 
 pub struct Sqlite {
     pool: Pool<SqliteConnectionManager>,
@@ -85,18 +141,18 @@ impl Sqlite {
         format!("select *, count(*) OVER() from {} {} {} {} limit {}, {}", table, where_clause, order_by, ascdesc, offset, count)
     }
 
-    pub fn get_tags(&self, order_by_count:bool, desc:bool, offset:u32, count:u32, filter:Option<String>) -> Result<SearchResult<TagCount>, rusqlite::Error> {
+    pub fn get_counts<T: DbInfo<T> + std::fmt::Debug + Serialize>(&self, order_by_count:bool, desc:bool, offset:u32, count:u32, filter:Option<String>) -> Result<SearchResult<T>, rusqlite::Error> {
         let conn = self.pool.get().unwrap();
-        let mut stmt = conn.prepare(&self.get_count_sql(order_by_count, desc, filter.is_some(), offset, count, "tags", "tag"))?;
+        let mut stmt = conn.prepare(&self.get_count_sql(order_by_count, desc, filter.is_some(), offset, count, &T::get_table(), &T::get_pkcol()))?;
         let mut fullcount=0;
-        let payload:Vec<TagCount> = stmt.query_map(params![filter.as_ref().unwrap_or(&String::new())], |row| {
+        let payload:Vec<T> = stmt.query_map(params![filter.as_ref().unwrap_or(&String::new())], |row| {
             if fullcount!=0 {
                 fullcount=row.get(3)?;
             }
-            Ok(TagCount {
-                tag: row.get(0)?,
-                count: row.get(1)?,
-            })
+            Ok(T::new(
+                row.get(0)?, 
+                row.get(1)?
+            ))        
         })?.filter_map(|t| t.ok()).collect();
 
         Ok(SearchResult {
@@ -106,33 +162,6 @@ impl Sqlite {
             payload,
         })
     }
-
-    pub fn get_authors(&self, order_by_count:bool, desc:bool, offset:u32, count:u32, filter:Option<String>) -> Result<Vec<AuthorCount>, rusqlite::Error> {
-        let conn = self.pool.get().unwrap();
-        let mut stmt = conn.prepare(&self.get_count_sql(order_by_count, desc, filter.is_some(), offset, count, "authors", "creator"))?;
-        let x:Vec<AuthorCount> = stmt.query_map(params![filter.unwrap_or(String::new())], |row| {
-            Ok(AuthorCount {
-                creator: row.get(0)?,
-                count: row.get(1)?,
-            })
-        })?.filter_map(|t| t.ok()).collect();
-        
-        Ok(x)
-    }
-
-    pub fn get_publishers(&self, order_by_count:bool, desc:bool, offset:u32, count:u32, filter:Option<String>) -> Result<Vec<PublisherCount>, rusqlite::Error> {
-        let conn = self.pool.get().unwrap();
-        let mut stmt = conn.prepare(&self.get_count_sql(order_by_count, desc, filter.is_some(), offset, count, "publishers", "publisher"))?;
-        let x:Vec<PublisherCount> = stmt.query_map(params![filter.unwrap_or(String::new())], |row| {
-            Ok(PublisherCount {
-                publisher: row.get(0)?,
-                count: row.get(1)?,
-            })
-        })?.filter_map(|t| t.ok()).collect();
-        
-        Ok(x)
-    }
-
     /*handy queries
     select * from tags where tag like "%lovecraft%" order by count desc limit 20,20;
     limit term is skip,count

@@ -82,6 +82,20 @@ pub struct TagCount {
 	count:u32,
 }
 
+trait DbInfo {
+	fn get_table() -> String;
+	fn get_pkcol() -> String;
+}
+
+impl DbInfo for AuthorCount {
+	fn get_table() -> String {
+		"authors".to_string()
+	}
+
+	fn get_pkcol() -> String {
+		"author".to_string()
+	}
+}
 
 //A navigation category (primarily for opds)
 #[derive(Debug, Serialize)]
