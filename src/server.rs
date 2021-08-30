@@ -14,7 +14,7 @@ use std::io::prelude::*;
 
 use crate::search_result::OpdsPage;
 use crate::OpdsCategory;
-use crate::TagCount;
+use crate::{TagCount,AuthorCount,PublisherCount};
 
 use urlencoding::encode;
 
@@ -130,11 +130,23 @@ impl Server {
 							None => false,
 						};
 
-						let results = match kind.as_str() {
+						match kind.as_str() {
 							"tags" => {
 								match self.sqlite.get_counts::<TagCount>(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
-									Ok(res) => res,
+									Ok(res) => return Response::from_data("application/json", res.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
 									Err(_) => return self.get_json_error_response("Tags error", "Unable to query tag counts")
+								}
+							},
+							"authors" => {
+								match self.sqlite.get_counts::<AuthorCount>(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
+									Ok(res) => return Response::from_data("application/json", res.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
+									Err(_) => return self.get_json_error_response("Authors error", "Unable to query author counts")
+								}
+							},
+							"publishers" => {
+								match self.sqlite.get_counts::<PublisherCount>(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
+									Ok(res) => return Response::from_data("application/json", res.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
+									Err(_) => return self.get_json_error_response("Publisher error", "Unable to query publisher counts")
 								}
 							},
 							_ => return Response::empty_404()
