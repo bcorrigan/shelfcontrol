@@ -1,14 +1,15 @@
+use std::fmt::Debug;
+
 use crate::error::ClientError;
-use crate::BookMetadata;
 //use BookMetadata;
 //Responsible for representing search results, serialising into variopus formats etc
 
 #[derive(Debug)]
-pub struct SearchResult {
+pub struct SearchResult<T: Debug + serde::Serialize> {
 	pub count: usize,
 	pub start: usize,
-	pub query: String,
-	pub books: Vec<BookMetadata>,
+	pub query: Option<String>,
+	pub payload: Vec<T>,
 }
 
 #[derive(Debug)]
@@ -31,25 +32,29 @@ pub struct OpdsPage {
 	pub url: String,
 }
 
-impl SearchResult {
+impl<T: Debug + serde::Serialize> SearchResult<T> {
 	pub fn to_json(&self) -> String {
+		let query_str = match self.query.as_ref() {
+			Some(q) => format!("\"query\":\"{}\",", q.replace("\"", "\\\"")),
+			None => String::new(),
+		};
 		let mut json_str: String = format!(
 			"{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[",
 			self.count,
 			self.start,
-			self.query.replace("\"", "\\\"")
+			query_str,
 		)
 		.to_string();
 
-		let num_books = self.books.len();
+		let num_items = self.payload.len();
 
-		for (i, bm) in self.books.iter().enumerate() {
+		for (i, bm) in self.payload.iter().enumerate() {
 			json_str.push_str(match &serde_json::to_string(bm) {
 				Ok(str) => str,
 				Err(_) => continue,
 			});
 
-			if (i + 1) != num_books {
+			if (i + 1) != num_items {
 				json_str.push_str(",");
 			}
 		}

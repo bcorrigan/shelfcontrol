@@ -7,6 +7,8 @@ extern crate rayon;
 extern crate epub;
 extern crate tantivy;
 extern crate walkdir;
+extern crate r2d2;
+extern crate r2d2_sqlite;
 extern crate rusqlite;
 #[macro_use]
 extern crate maplit;
@@ -33,7 +35,7 @@ use std::process;
 
 use server::Server;
 
-use crate::sqlite::SqlWriter;
+use crate::sqlite::Sqlite;
 
 mod error;
 mod scanner;
@@ -45,7 +47,7 @@ mod sqlite;
 
 //to embed resources use rust-embed or include_str
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct BookMetadata {
 	#[serde(with = "string")]
 	id: i64,
@@ -62,27 +64,41 @@ pub struct BookMetadata {
 	moddate: Option<String>,
 	cover_mime: Option<String>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct AuthorCount {
 	creator: String,
 	count:u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct PublisherCount {
 	publisher: String,
 	count:u32,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct TagCount {
 	tag: String,
 	count:u32,
 }
 
+trait DbInfo {
+	fn get_table() -> String;
+	fn get_pkcol() -> String;
+}
+
+impl DbInfo for AuthorCount {
+	fn get_table() -> String {
+		"authors".to_string()
+	}
+
+	fn get_pkcol() -> String {
+		"author".to_string()
+	}
+}
 
 //A navigation category (primarily for opds)
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct OpdsCategory {
 	id: i64,
 	moddate: String,
@@ -218,11 +234,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 			.required(false))
 		.get_matches();
 
+	let db_dir = value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string());
+
 	if matches.is_present("search") {
+		let sqlite = Sqlite::new(&format!("{}/counts.sqlite", &db_dir))?;
 		match ttvy::TantivyReader::new(value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string())) {
 			Ok(reader) => {
 				let server = Server::new(
 					reader,
+					sqlite,
 					"localhost",
 					8000,
 					false,
@@ -246,8 +266,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		None => (false, None),
 	};
 
-	let db_dir = value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string());
-
 	let writer: Box<dyn BookWriter + Sync + Send> = match matches.value_of("db").unwrap_or("tantivy") {
 		"tantivy" => Box::new(match ttvy::TantivyWriter::new(&db_dir) {
 			Ok(writer) => Ok(writer),
@@ -256,8 +274,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		_ => process::exit(2),
 	};
 
-	let sqlite_writer = SqlWriter::new(&format!("{}/counts.sqlite", &db_dir))?;
-
 	let dirs = values_t!(matches.values_of("directory"), String).unwrap_or_else(|_| vec![".".to_string()]);
 
 	if matches.is_present("threads") {
@@ -265,5 +281,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		rayon::ThreadPoolBuilder::new().num_threads(pool_size).build_global()?
 	}
 
-	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer, sqlite_writer)
+	let sqlite = Sqlite::new(&format!("{}/counts.sqlite", &db_dir))?;
+	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer, sqlite)
 }

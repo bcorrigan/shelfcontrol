@@ -1,3 +1,4 @@
+use crate::sqlite::Sqlite;
 use crate::ttvy::TantivyReader;
 
 use epub::doc::EpubDoc;
@@ -5,6 +6,7 @@ use epub::doc::EpubDoc;
 use crate::error::ClientError;
 use crate::error::StoreError;
 use rouille::Response;
+use std::convert::TryInto;
 use std::fmt;
 use std::fs::File;
 use std::io;
@@ -12,6 +14,7 @@ use std::io::prelude::*;
 
 use crate::search_result::OpdsPage;
 use crate::OpdsCategory;
+use crate::TagCount;
 
 use urlencoding::encode;
 
@@ -19,6 +22,7 @@ include!(concat!(env!("OUT_DIR"), "/templates.rs"));
 
 pub struct Server {
 	pub reader: TantivyReader,
+	pub sqlite: Sqlite,
 	pub host: String,
 	pub port: u32,
 	pub use_coverdir: bool,
@@ -39,9 +43,10 @@ impl fmt::Display for ServerError {
 }
 
 impl Server {
-	pub fn new(reader: TantivyReader, host: &str, port: u32, use_coverdir: bool, coverdir: Option<String>) -> Result<Server, ServerError> {
+	pub fn new(reader: TantivyReader, sqlite: Sqlite, host: &str, port: u32, use_coverdir: bool, coverdir: Option<String>) -> Result<Server, ServerError> {
 		Ok(Server {
 			reader,
+			sqlite,
 			host: host.to_string(),
 			port,
 			use_coverdir,
@@ -84,6 +89,58 @@ impl Server {
 								}
 							}
 						}
+					},
+					(GET) (/api/counts/{kind: String}) => {
+						let filter = request.get_param("query").map(|s| s.trim().to_string());
+						//let filter = query_param. ;
+
+						let start = match request.get_param("start").unwrap_or_else(|| "0".to_string()).parse::<usize>() {
+							Ok(start) => start,
+							Err(_) => return self.get_json_error_response("Type error", "\"start\" should have an integer argument"),
+						};
+
+						let limit = match request.get_param("limit").unwrap_or_else(|| "100".to_string()).parse::<usize>() {
+							Ok(lim) => lim,
+							Err(_) => return self.get_json_error_response("Type error", "\"limit\" should have an integer argument"),
+						};
+
+						let order = match request.get_param("countorder") {
+							Some(orderby) => {
+								if orderby=="true" {
+									true
+								} else if orderby=="false" {
+									false
+								} else {
+									return self.get_json_error_response("Type error", "\"countorder\" should be true or false")
+								}
+							},
+							None => false,
+						};
+
+						let asc = match request.get_param("ascending") {
+							Some(ascending) => {
+								if ascending=="true" {
+									true
+								} else if ascending=="false" {
+									false
+								} else {
+									return self.get_json_error_response("Type error", "\"ascending\" should be true or false")
+								}
+							},
+							None => false,
+						};
+
+						let results = match kind.as_str() {
+							"tags" => {
+								match self.sqlite.get_counts::<TagCount>(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
+									Ok(res) => res,
+									Err(_) => return self.get_json_error_response("Tags error", "Unable to query tag counts")
+								}
+							},
+							_ => return Response::empty_404()
+						};
+
+						Response::empty_404()
 					},
 					(GET) (/api/opensearch) => {
 						Response::text("<?xml version=\"1.0\" encoding=\"UTF-8\"?>  

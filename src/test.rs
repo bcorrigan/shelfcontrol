@@ -3,10 +3,9 @@ mod test {
 
 	use crate::scanner;
 	use crate::ttvy;
-	use crate::SqlWriter;
+	use crate::Sqlite;
 	use std::fs;
 	use std::io::Error;
-	use crate::error::StoreError;
 	use std::{thread, time};
 
 	struct DirsCleanup;
@@ -22,7 +21,7 @@ mod test {
     	fs::create_dir("target/images")?;
 		let db_dir = &"target/index".to_string();
     	let writer = ttvy::TantivyWriter::new(db_dir).unwrap();
-		let sql_writer = SqlWriter::new(&format!("{}/counts.sqlite", &db_dir)).unwrap();
+		let sql_writer = Sqlite::new(&format!("{}/counts.sqlite", &db_dir)).unwrap();
 
     	scanner::scan_dirs(["test/library".to_string()].to_vec(), Some("target/images"), true, Box::new(writer), sql_writer).expect("Scanner failed");
     	let reader = ttvy::TantivyReader::new("target/index".to_string()).expect("Reader failed");
@@ -45,7 +44,7 @@ mod test {
 
 		result = reader.search("creator:\"Thomas de Quincey\"", 0, 10).expect("Search failed");
 		assert!(result.count == 1);
-		let book = result.books.get(0).unwrap();
+		let book = result.payload.get(0).unwrap();
 		println!("{}", book.creator.as_ref().unwrap());
 		assert!(book.creator.as_ref().unwrap() == "Thomas De Quincey");
 		assert!(book.filesize == 115227);
