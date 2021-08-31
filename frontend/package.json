@@ -9,27 +9,27 @@
   },
   "dependencies": {
     "axios": "^0.21.1",
-    "epubjs": "^0.3",
-    "jszip": "^3.1.5",
-    "core-js": "^3.6.5",
+    "core-js": "^3.16",
     "datejs": "^1.0.0-rc3",
+    "epubjs": "^0.3",
+    "jszip": "^3.7",
     "stylus": "^0.54.8",
     "stylus-loader": "^3.0.2",
-    "vue": "^2.6.11",
-    "vuetify": "^2.4.11"
+    "vue": "^2.6.14",
+    "vuetify": "^2.5"
   },
   "devDependencies": {
     "@vue/cli-plugin-babel": "~4.5.0",
     "@vue/cli-plugin-eslint": "~4.5.0",
     "@vue/cli-service": "~4.5.0",
     "babel-eslint": "^10.1.0",
-    "eslint": "^6.7.2",
-    "eslint-plugin-vue": "^6.2.2",
-    "sass": "^1.32.12",
-    "sass-loader": "^10.1.1",
-    "vue-cli-plugin-vuetify": "~2.4.0",
-    "vue-template-compiler": "^2.6.11",
-    "vuetify-loader": "^1.7.0"
+    "eslint": "^7.3",
+    "eslint-plugin-vue": "^7.17",
+    "sass": "^1.38",
+    "sass-loader": "^10.1",
+    "vue-cli-plugin-vuetify": "^2.4",
+    "vue-template-compiler": "^2.6",
+    "vuetify-loader": "^1.7"
   },
   "eslintConfig": {
     "root": true,

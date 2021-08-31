@@ -35,11 +35,11 @@ pub struct OpdsPage {
 impl<T: Debug + serde::Serialize> SearchResult<T> {
 	pub fn to_json(&self) -> String {
 		let query_str = match self.query.as_ref() {
-			Some(q) => format!("\"query\":\"{}\",", q.replace("\"", "\\\"")),
+			Some(q) => q.replace("\"", "\\\""),
 			None => String::new(),
 		};
 		let mut json_str: String = format!(
-			"{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"books\":[",
+			"{{\"count\":{}, \"position\":{}, \"query\":\"{}\", \"payload\":[", 
 			self.count,
 			self.start,
 			query_str,
