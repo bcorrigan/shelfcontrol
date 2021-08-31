@@ -123,10 +123,12 @@ impl Sqlite {
 
     pub fn get_counts<T: DbInfo<T> + std::fmt::Debug + Serialize>(&self, order_by_count:bool, asc:bool, offset:u32, count:u32, filter:Option<String>) -> Result<SearchResult<T>, rusqlite::Error> {
         let conn = self.pool.get().unwrap();
-        let mut stmt = conn.prepare(&self.get_count_sql(order_by_count, asc, filter.is_some(), offset, count, &T::get_table(), &T::get_pkcol()))?;
+        let query = &self.get_count_sql(order_by_count, asc, filter.is_some(), offset, count, &T::get_table(), &T::get_pkcol());
+        let mut stmt = conn.prepare(query)?;
         let mut fullcount=0;
         let new_str = String::new();
-        let some_params = params![filter.as_ref().unwrap_or(&new_str)];
+
+        let some_params = params![format!("%{}%", filter.as_ref().unwrap_or(&new_str))];
         let params = if filter.is_some() {some_params} else {params![]};
         let payload:Vec<T> = stmt.query_map(params, |row| {
             if fullcount!=0 {
