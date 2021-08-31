@@ -75,29 +75,20 @@ impl Sqlite {
         })
     }
 
-    pub fn create_tables(&self) -> Result<(), rusqlite::Error> {
+    pub fn make_db(&self) -> Result<(), rusqlite::Error> {
+        self.create_table::<AuthorCount>()?;
+        self.create_table::<PublisherCount>()?;
+        self.create_table::<TagCount>()?;
+        Ok(())
+    }
+
+    fn create_table<T: DbInfo<T> + std::fmt::Debug + Serialize>(&self) -> Result<(), rusqlite::Error> {
         let conn = self.pool.get().unwrap();
         conn.execute(
-            "CREATE TABLE authors (
-                    creator TEXT primary key,
+            &format!("CREATE TABLE {} (
+                    {} TEXT primary key,
                     count INTEGER
-            )", 
-    [],
-        )?;
-
-        conn.execute(
-            "CREATE TABLE publishers (
-                    publisher TEXT primary key,
-                    count INTEGER
-            )", 
-    [],
-        )?;
-
-        conn.execute(
-            "CREATE TABLE tags (
-                    tag TEXT primary key,
-                    count INTEGER
-            )", 
+            )", T::get_table(), T::get_pkcol() ), 
     [],
         )?;
 
