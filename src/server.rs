@@ -134,7 +134,7 @@ impl Server {
 							"tags" => {
 								match self.sqlite.get_counts::<TagCount>(order, asc, start.try_into().unwrap(), limit.try_into().unwrap(), filter ) {
 									Ok(res) => Response::from_data("application/json", res.to_json()).with_additional_header("Access-Control-Allow-Origin", "*"),
-									Err(_) => self.get_json_error_response("Tags error", "Unable to query tag counts").with_status_code(500)
+									Err(e) => { println!("{}", e); self.get_json_error_response("Tags error", "Unable to query tag counts").with_status_code(500) }
 								}
 							},
 							"authors" => {
