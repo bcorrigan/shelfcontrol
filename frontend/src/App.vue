@@ -100,6 +100,9 @@
       ],
       router:null
     }),
+     mounted () {
+       this.$router.push({ name: 'books', params: { search:'*'} });
+     },
     methods: {
       dosearch() {
         this.$router.push({ name: 'books', params: { search:this.searchtext} });
