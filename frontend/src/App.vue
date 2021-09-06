@@ -101,7 +101,11 @@
       router:null
     }),
      mounted () {
-       this.$router.push({ name: 'books', params: { search:'*'} });
+      var loadParams = this.$route.params.search;
+      if(loadParams==undefined || loadParams.trim()=="") {
+          loadParams='*';
+      }
+       this.$router.push({ name: 'books', params: { search:loadParams} });
      },
     methods: {
       dosearch() {
