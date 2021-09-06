@@ -1,4 +1,4 @@
-<template>
+ <template>
   <v-app id="shelfcontrol">
     <v-app-bar color="amber darken-1" clipped-left app>
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
@@ -74,7 +74,7 @@
       </v-list>
     </v-navigation-drawer>
     <v-main>
-      <router-view></router-view>
+      <router-view @bookSearch="setSearchField"></router-view>
     </v-main>
   </v-app>
 </template>
@@ -103,6 +103,9 @@
     methods: {
       dosearch() {
         this.$router.push({ name: 'books', params: { search:this.searchtext} });
+      },
+      setSearchField(term) {
+        this.searchtext=term;
       }
     }
   }

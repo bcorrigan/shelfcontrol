@@ -215,6 +215,7 @@
           this.count = response.data.count,
           this.lastquery = response.data.query,
           this.position = response.data.position,
+          this.$emit('bookSearch', response.data.query),
           this.zeroResult()
           )
         )
