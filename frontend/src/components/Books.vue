@@ -184,6 +184,7 @@
       previewdialog: false,
       errorMsg: null,
       searchtext: null,
+      router:null,
       host:"localhost"
     }),
     props: {
@@ -191,9 +192,13 @@
     },
     mounted () {
       this.host = window.location.hostname;
+      var loadParams = this.$route.params.search;
+      if(loadParams==undefined || loadParams.trim()=="") {
+          loadParams='*';
+      }
       this.$axios
-        .get('http://' + this.host + ':8080/api/search?query=*&limit=20')
-        .then(response => (this.books = response.data.payload , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position));
+        .get('http://' + this.host + ':8080/api/search?query=' + loadParams + '&limit=20')
+        .then(response => (this.books = response.data.payload , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position, this.$emit('bookSearch', response.data.query)));
     },
     watch: {
       $route(to, from) {

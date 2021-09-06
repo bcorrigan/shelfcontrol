@@ -18,6 +18,7 @@ const router = new VueRouter({
   base: __dirname,
   routes: [
     { path: '/books/:search', name: "books", component: Books },
+    { path: '/books', name: "books", component: Books },
     { path: '/categories/:type', name: "categories", component: Categories, props: true  },
   ]
 });
