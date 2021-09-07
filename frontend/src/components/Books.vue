@@ -91,6 +91,14 @@
                         <v-spacer class="v-spacer">&nbsp;</v-spacer>
                       </span>
                     </v-layout>
+                    <v-btn
+                        icon
+                        tile
+                        color="orange"
+                        :href="'http://localhost:8080/books/id:' + book.id"
+                    >
+                        <v-icon>link</v-icon>
+                    </v-btn>
                     <v-tooltip bottom>
                       <template v-slot:activator="{ on }">
                         <v-btn
