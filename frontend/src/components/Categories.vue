@@ -10,10 +10,36 @@
         @change="docountssearchof()"
       ></v-text-field>
     </v-card-title>
-    <v-data-table
+
+    <v-chip-group
+      column
+    >
+      <v-chip
+        v-for="item in items"
+        :key="item.tag"
+        color="#FFE0B2"
+        :href="'http://localhost:8080/books/tags:&quot;%2F' + item.tag + '&quot;'"
+      >
+      <strong>{{ item.tag }}</strong>&nbsp;<em>({{ item.count }})</em>
+      </v-chip>
+    </v-chip-group>
+
+<!--    <v-data-table
       :headers="headers"
       :items="items"
-    ></v-data-table>
+    >
+        <template v-slot:[`item.tag`]="{ item }">
+          <v-chip
+            color="#FFE0B2"
+            outline
+            label
+            link
+            :href="'http://localhost:8080/books/tags:&quot;%2F' + item.tag + '&quot;'"
+          >
+            {{ item.tag }}
+          </v-chip>
+        </template>
+    </v-data-table> -->
   </v-card>
 </template>
 <!-- 
@@ -51,7 +77,7 @@ Then plonk in pagination as well
             docountssearchof() {
                 this.filtertext = this.search;
                 this.errorMsg = null;
-                this.$axios.get('http://' + this.host + ':8000/api/counts/' + this.type + '?query=' + this.search + '&countorder=true&limit=20&start=' + ((this.page-1) * 100))
+                this.$axios.get('http://' + this.host + ':8000/api/counts/' + this.type + '?query=' + this.search + '&countorder=true&limit=100&start=' + ((this.page-1) * 100))
                     .then(response => ( 
                             this.items = response.data.payload,
                             this.count = response.data.count,
