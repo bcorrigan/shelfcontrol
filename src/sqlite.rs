@@ -96,12 +96,12 @@ impl Sqlite {
     }
 
     pub fn write_counts<T: DbInfo<T> + std::fmt::Debug + Serialize>(&self, counts: HashMap<String, u32>) -> Result<(), rusqlite::Error> {
+        self.pool.get().unwrap().execute("BEGIN TRANSACTION")?;
+        let mut stmt = conn.prepare(&format!("INSERT INTO {}({}, count) values (?1, ?2)", T::get_table(), T::get_pkcol()))?;
         for (key, count) in counts {
-            self.pool.get().unwrap().execute(
-                &format!("INSERT INTO {}({}, count) values (?1, ?2)", T::get_table(), T::get_pkcol()),
-                params![key,count],
-            )?;
+            stmt.execute_named(params![key,count])?;
         }
+        self.pool.get().unwrap().execute("END TRANSACTION")?;
         Ok(())
     }
 
