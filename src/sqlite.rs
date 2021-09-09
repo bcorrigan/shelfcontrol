@@ -96,12 +96,19 @@ impl Sqlite {
     }
 
     pub fn write_counts<T: DbInfo<T> + std::fmt::Debug + Serialize>(&self, counts: HashMap<String, u32>) -> Result<(), rusqlite::Error> {
-        for (key, count) in counts {
-            self.pool.get().unwrap().execute(
-                &format!("INSERT INTO {}({}, count) values (?1, ?2)", T::get_table(), T::get_pkcol()),
-                params![key,count],
-            )?;
+        let mut conn = self.pool.get().unwrap();
+        conn.pragma_update(None, "synchronous", &"OFF")?; //don't wait for OS ACK on writes
+        conn.pragma_update(None, "journal_mode", &"MEMORY")?; //journal in memory not disk
+
+        let tx = conn.transaction()?;
+        {
+            let mut stmt = tx.prepare(&format!("INSERT INTO {}({}, count) values (?1, ?2)", T::get_table(), T::get_pkcol()))?;
+            for (key, count) in counts {
+                stmt.execute(params![key,count])?;
+            }
         }
+        tx.commit()?;
+        conn.execute(&format!("CREATE UNIQUE INDEX {}_idx ON {} ({})", T::get_table(), T::get_table(), T::get_pkcol()), params![])?;
         Ok(())
     }
 
