@@ -74,7 +74,7 @@
       </v-list>
     </v-navigation-drawer>
     <v-main>
-      <router-view @bookSearch="setSearchField"></router-view>
+      <router-view @bookSearch="setSearchField" @categoriesInit="clearSearchField"></router-view>
     </v-main>
   </v-app>
 </template>
@@ -113,6 +113,9 @@
       },
       setSearchField(term) {
         this.searchtext=term;
+      },
+      clearSearchField() {
+        this.searchtext="";
       }
     }
   }
