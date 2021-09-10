@@ -16,12 +16,12 @@
     >
       <v-chip
         v-for="item in items"
-        :key="item.tag"
+        :key="item[pkfield]"
         color="#FFE0B2"
         link
-        @click="navigate(item.tag)"
+        @click="navigate(item[pkfield])"
       >
-      <strong>{{ item.tag }}</strong>&nbsp;<em>({{ item.count }})</em>
+      <strong>{{ item[pkfield] }}</strong>&nbsp;<em>({{ item.count }})</em>
       </v-chip>
     </v-chip-group>
   </v-card>
@@ -39,7 +39,8 @@ Then plonk in pagination as well
     export default {
         data () {
             return {
-                type: "tags",
+                type: null,
+                pkfield: null,
                 page: 1,
                 count: 0,
                 position: 0,
@@ -62,17 +63,7 @@ Then plonk in pagination as well
             }
         },
         mounted () {
-          this.$emit('categoriesInit');
-          this.$axios.get('http://' + this.host + ':8000/api/counts/' + this.type + '?query=&countorder=true&limit=1000&start=' + ((this.page-1) * 1000))
-              .then(response => ( 
-                      this.items = response.data.payload,
-                      this.count = response.data.count,
-                      this.lastquery = response.data.query,
-                      this.position = response.data.position
-                      //this.zeroResult()
-              )
-          )
-                
+          this.init();
         },
         watch: {
           search: function () {
@@ -80,12 +71,41 @@ Then plonk in pagination as well
               setTimeout(() => {
                 this.docountssearchof();
                 this.awaitingSearch = false;
-              }, 200); //200ms  delay
+              }, 500); //200ms  delay
             }
             this.awaitingSearch = true;
+          },
+          $route() {
+            this.init();
           }
         },
         methods: {
+            init() {
+              this.$emit('categoriesInit');
+              this.type = this.$route.params.type;
+              switch(this.type) {
+                case "authors":
+                  this.pkfield="creator";
+                  break;
+                case "publishers":
+                  this.pkfield="publisher"; 
+                  break;
+                case "tags":
+                  this.pkfield="tag";
+                  break;
+                case "years":
+                  this.pkfield="year";
+              }
+              this.$axios.get('http://' + this.host + ':8000/api/counts/' + this.type + '?query=&countorder=true&limit=200&start=' + ((this.page-1) * 200))
+                  .then(response => ( 
+                          this.items = response.data.payload,
+                          this.count = response.data.count,
+                          this.lastquery = response.data.query,
+                          this.position = response.data.position
+                          //this.zeroResult()
+                  )
+              )
+            },
             docountssearchof() {
                 this.filtertext = this.search;
                 this.errorMsg = null;
