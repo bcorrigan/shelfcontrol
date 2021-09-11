@@ -205,7 +205,7 @@
           loadParams='*';
       }
       this.$axios
-        .get('http://' + this.host + ':8080/api/search?query=' + loadParams + '&limit=20')
+        .get('http://' + this.host + ':8080/api/search?query=' + encodeURIComponent(loadParams) + '&limit=20')
         .then(response => (this.books = response.data.payload , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position, this.$emit('bookSearch', response.data.query)));
     },
     watch: {
@@ -222,7 +222,7 @@
         this.errorMsg=null;
         window.scrollTo(0,0);
         this.$axios
-        .get('http://' + this.host + ':8080/api/search?query=' + param + '&limit=20&start='+ ((this.page-1)*20))
+        .get('http://' + this.host + ':8080/api/search?query=' + encodeURIComponent(param) + '&limit=20&start='+ ((this.page-1)*20))
         .then(response =>
           (this.books = response.data.payload,
           this.count = response.data.count,
@@ -231,19 +231,6 @@
           this.$emit('bookSearch', response.data.query),
           this.zeroResult()
           )
-        )
-      },
-      docountssearchof(param, type) {
-        this.filtertext = param;
-        this.errorMsg = null;
-        this.$axios.get('http://' + this.host + ':8000/api/counts/' + type + '/?query=' + param + '&countorder=true&limit=20&start=' + ((this.page-1) * 100))
-        .then(response =>
-        ( //this.countkeys = response.data.payload,
-        this.count = response.data.count,
-        this.lastquery = response.data.query,
-        this.position = response.data.position
-        //this.zeroResult()
-        )
         )
       },
       dosearch () {
