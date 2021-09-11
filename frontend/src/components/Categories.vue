@@ -127,7 +127,7 @@ Then plonk in pagination as well
                 )
             },
             navigate(item) {
-              this.$router.push({ name: 'books', params: { search:this.pkfield+':"' + this.searchprepend + item + '"'} });
+              this.$router.push({ name: 'books', params: { search:this.searchfield+':"' + this.searchprepend + item + '"'} });
             }
         }
 

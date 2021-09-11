@@ -16,7 +16,7 @@ use crate::search_result::OpdsPage;
 use crate::OpdsCategory;
 use crate::{TagCount,AuthorCount,PublisherCount};
 
-use urlencoding::encode;
+use urlencoding::{encode, decode};
 
 include!(concat!(env!("OUT_DIR"), "/templates.rs"));
 
@@ -63,10 +63,11 @@ impl Server {
 				router!(request,
 					(GET) (/api/search) => {
 						let query_param = &request.get_param("query");
-						let query_str = match query_param {
-							Some(query) => query,
+						let query_result = match query_param {
+							Some(query) => decode(query),
 							None => return self.get_json_error_response("Query error", "\"query\" should be provided when performing a query")
-						}.trim();
+						}.unwrap();
+						let query_str = query_result.trim();
 
 						let start = match request.get_param("start").unwrap_or_else(|| "0".to_string()).parse::<usize>() {
 							Ok(start) => start,
