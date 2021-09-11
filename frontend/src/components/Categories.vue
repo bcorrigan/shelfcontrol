@@ -41,6 +41,7 @@ Then plonk in pagination as well
             return {
                 type: null,
                 pkfield: null,
+                searchfield: null,
                 page: 1,
                 count: 0,
                 position: 0,
@@ -86,12 +87,18 @@ Then plonk in pagination as well
               switch(this.type) {
                 case "authors":
                   this.pkfield="creator";
+                  this.searchfield="creator";
+                  this.searchprepend="";
                   break;
                 case "publishers":
-                  this.pkfield="publisher"; 
+                  this.pkfield="publisher";
+                  this.searchfield="publisher";
+                  this.searchprepend="";
                   break;
                 case "tags":
                   this.pkfield="tag";
+                  this.searchfield="tags";
+                  this.searchprepend="/";
                   break;
                 case "years":
                   this.pkfield="year";
@@ -120,7 +127,7 @@ Then plonk in pagination as well
                 )
             },
             navigate(item) {
-              this.$router.push({ name: 'books', params: { search:'tags:"/' + item + '"'} });
+              this.$router.push({ name: 'books', params: { search:this.pkfield+':"' + this.searchprepend + item + '"'} });
             }
         }
 
