@@ -145,13 +145,101 @@ mod string {
 	}
 }
 
+#[test]
+fn test_unmangle_tags() {
+
+	let mut testbm = BookMetadata {
+		id: 0,
+		title: None,
+		description: None,
+		publisher: None,
+		creator: None,
+		subject: Some(vec!["Contemporary romance fiction; contemporary romance; contemporary women’s fiction; romance; Small Town & Rural; Women’s Fiction; Opposites attract".to_string()]), //aka tags
+		file: "test_file".to_string(),
+		filesize: 0,
+		modtime: 0,
+		pubdate: None,
+		moddate: None,
+		cover_mime: None,
+	};
+
+	let mut tagmap = HashMap::new();
+	testbm.add_tags(&mut tagmap);
+
+	assert_eq!(7, tagmap.len());
+
+	testbm.subject = Some(vec!["West (AK; CA; CO; HI; ID; MT; NV; UT; WY)".to_string()]);
+	tagmap = HashMap::new();
+	testbm.add_tags(&mut tagmap);
+	assert_eq!(1, tagmap.len());
+
+	testbm.subject = Some(vec!["Drew; Nancy (Fictitious Character)".to_string()]);
+	tagmap = HashMap::new();
+	testbm.add_tags(&mut tagmap);
+	assert_eq!(1, tagmap.len());
+
+	testbm.subject = Some(vec!["FIC027020  FICTION / Romance / Contemporary; FIC044000  FICTION / Contemporary Women".to_string()]);
+	tagmap = HashMap::new();
+	testbm.add_tags(&mut tagmap);
+	assert_eq!(4, tagmap.len());
+
+	testbm.subject = Some(vec!["Fiction / Action & Adventure, Fiction / Fantasy / Epic, Fiction / Fantasy / Historical, Fiction / War & Military".to_string()]);
+	tagmap = HashMap::new();
+	testbm.add_tags(&mut tagmap);
+	assert_eq!(6, tagmap.len());
+
+	testbm.subject = Some(vec!["Billionaire Romance; Romantic Heroes Royalty & Aristocrats; Romantic Themes Workplace; New Adult & College Romance; City Life Fiction; Contemporary British Fiction; Coming of Age Fiction; Avery Flynn; Entangled Publishing; Royal Bastard; Royalty Romance; Earl; Romantic Comedy; RomCom; Contemporary Romance; Loudmouth by Avery Flynn; Awkweird by Avery Flynn; Parental Guidance by Avery Flynn; Opposites attract romance; Boss/Employee Romance; Forbidden Romance; Fish out of Water Romance; Instantly Royal; Amara; Stand Alone Romance; Series Romance".to_string()]);
+	tagmap = HashMap::new();
+	testbm.add_tags(&mut tagmap);
+	assert_eq!(26, tagmap.len());
+
+	testbm.subject = Some(vec!["Juvenile Fiction / Action & Adventure / General, Juvenile Fiction / Fantasy & Magic, Juvenile Fiction / Science Fiction, Juvenile Fiction / Monsters".to_string()]);
+	tagmap = HashMap::new();
+	testbm.add_tags(&mut tagmap);
+	assert_eq!(6, tagmap.len());
+}
+
 impl BookMetadata {
+
 	pub fn add_tags(&self, tags: &mut HashMap<String, u32>) {
 		//add any known tags
 		if self.subject.is_some() {
-			for tag in self.subject.as_ref().unwrap() {
-				tags.insert(tag.to_string(), tags.get(tag).unwrap_or(&0)+1);
+			for subject in self.subject.as_ref().unwrap() {
+				let subjectlc = subject.to_ascii_lowercase();
+				let subjectlc = subjectlc.trim();
+				let semi_count = subjectlc.matches(";").count();
+				let comma_count = subjectlc.matches(",").count();
+				let slash_count = subjectlc.matches("/").count();
+
+				if semi_count>comma_count && semi_count>slash_count {
+					self.split_tags(tags, ";", subjectlc);
+					continue;
+				} else if comma_count>semi_count && comma_count>slash_count {
+					self.split_tags(tags, ",", subjectlc);
+					continue;
+				} else if slash_count > comma_count && slash_count > semi_count {
+					self.split_tags(tags, "/", subjectlc);
+					continue;
+				} else {
+					tags.insert(subjectlc.to_string(), tags.get(subjectlc).unwrap_or(&0)+1);
+					continue;
+				}
 			}
+		}
+	}
+
+	fn split_tags(&self, tags: &mut HashMap<String, u32>, delimiter: &str, subject: &str) {
+		for tag_candidate in subject.split(delimiter) {
+			if (tag_candidate.contains(delimiter) && !tag_candidate.contains(")")) 
+					   || (!tag_candidate.contains("(") && tag_candidate.contains(")"))
+					   || tag_candidate.contains("fictitious character") {
+				tags.insert(subject.to_string(), tags.get(subject).unwrap_or(&0)+1);
+				return;
+			}
+		}
+		for tag_candidate in subject.split(delimiter) {
+			let tag_candidate = tag_candidate.trim();
+			tags.insert(tag_candidate.to_string(), tags.get(tag_candidate).unwrap_or(&0)+1);
 		}
 	}
 
