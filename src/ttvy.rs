@@ -149,12 +149,14 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 			ttdoc.add_text(self.cover_mime, &bm.cover_mime.as_ref().unwrap_or(&empty_str));
 
 			if bm.subject.is_some() {
-				for subject in bm.subject.as_ref().unwrap() {
-					if !&subject.trim().is_empty() {
-						//println!("Making facet from: {}", &subject);
-						let mut tag = "/".to_string();
-						tag.push_str(&subject);
-						ttdoc.add_facet(self.tags, Facet::from(tag.as_str()));
+				let mut tagsmap = HashMap::new();
+				bm.add_tags(&mut tagsmap);
+
+				for tag in tagsmap.keys() {
+					if !tag.is_empty() {
+						let mut tagprefix = "/".to_string();
+						tagprefix.push_str(tag);
+						ttdoc.add_facet(self.tags, Facet::from(tagprefix.as_str()));
 					}
 				}
 			}
