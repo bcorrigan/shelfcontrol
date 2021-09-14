@@ -14,7 +14,7 @@ epub = { git = "https://github.com/danigm/epub-rs" }
 clap = "^2"
 r2d2 = "^0.8"
 r2d2_sqlite = "^0"
-tantivy = "^0.15"
+tantivy = "^0.16"
 rusqlite = "^0.25"
 rayon = "^1.5"
 walkdir = "^2" 
