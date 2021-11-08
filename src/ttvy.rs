@@ -28,6 +28,7 @@ use crate::BookMetadata;
 use crate::BookWriter;
 use ammonia::{Builder, UrlRelative};
 use tantivy::query::QueryParser;
+use chrono::prelude::*;
 
 pub struct TantivyWriter<'a> {
 	index_writer: std::sync::RwLock<IndexWriter>,
@@ -65,9 +66,11 @@ impl<'a> TantivyWriter<'a> {
 		//subject
 		let file = schema_builder.add_text_field("file", STRING | STORED);
 		let filesize = schema_builder.add_i64_field("filesize", IntOptions::default().set_stored().set_indexed());
-		let modtime = schema_builder.add_i64_field("modtime", IntOptions::default().set_stored().set_indexed().set_fast(Cardinality::SingleValue));
+		//let modtime = schema_builder.add_i64_field("modtime", IntOptions::default().set_stored().set_indexed().set_fast(Cardinality::SingleValue));
+		let modtime = schema_builder.add_date_field("modtime", FAST);
 		let pubdate = schema_builder.add_text_field("pubdate", TEXT | STORED);
 		let moddate = schema_builder.add_text_field("moddate", TEXT | STORED);
+		//let moddate = schema_builder.add_date_field("moddate", STORED | INDEXED);
 		let cover_mime = schema_builder.add_text_field("cover_mime", TEXT | STORED);
 		let tags = schema_builder.add_facet_field("tags", STORED | INDEXED);
 		let schema = schema_builder.build();
@@ -143,7 +146,8 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 			ttdoc.add_text(self.creator, bm.creator.as_ref().unwrap_or(&empty_str));
 			ttdoc.add_text(self.file, &bm.file);
 			ttdoc.add_i64(self.filesize, bm.filesize);
-			ttdoc.add_i64(self.modtime, bm.modtime);
+			
+			ttdoc.add_date(self.modtime,&DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(bm.modtime, 0), Utc)); 
 			ttdoc.add_text(self.pubdate, bm.pubdate.as_ref().unwrap_or(&empty_str));
 			ttdoc.add_text(self.moddate, &bm.moddate.as_ref().unwrap_or(&empty_str));
 			ttdoc.add_text(self.cover_mime, &bm.cover_mime.as_ref().unwrap_or(&empty_str));
