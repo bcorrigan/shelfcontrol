@@ -15,10 +15,10 @@ clap = "^2"
 r2d2 = "^0.8"
 r2d2_sqlite = "^0"
 tantivy = "^0.16"
-rusqlite = "^0.25"
+rusqlite = "^0.26"
 rayon = "^1.5"
 walkdir = "^2" 
-chrono = "^0.4" #not that well maintained tho not dead - maybe roll own
+chrono = {version = "^0.4", features=["serde"]} #not that well maintained tho not dead - maybe roll own
 rouille = "3" #dead project so need to replace
 serde_json = "^1.0"
 serde = "^1"
