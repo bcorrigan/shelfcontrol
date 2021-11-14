@@ -67,7 +67,7 @@ impl<'a> TantivyWriter<'a> {
 		let file = schema_builder.add_text_field("file", STRING | STORED);
 		let filesize = schema_builder.add_i64_field("filesize", IntOptions::default().set_stored().set_indexed());
 		//let modtime = schema_builder.add_i64_field("modtime", IntOptions::default().set_stored().set_indexed().set_fast(Cardinality::SingleValue));
-		let modtime = schema_builder.add_date_field("modtime", FAST);
+		let modtime = schema_builder.add_date_field("modtime", FAST | STORED);
 		let pubdate = schema_builder.add_text_field("pubdate", TEXT | STORED);
 		let moddate = schema_builder.add_text_field("moddate", TEXT | STORED);
 		//let moddate = schema_builder.add_date_field("moddate", STORED | INDEXED);
@@ -147,7 +147,7 @@ impl<'a> BookWriter for TantivyWriter<'a> {
 			ttdoc.add_text(self.file, &bm.file);
 			ttdoc.add_i64(self.filesize, bm.filesize);
 			
-			ttdoc.add_date(self.modtime,&DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(bm.modtime, 0), Utc)); 
+			ttdoc.add_date(self.modtime,&bm.modtime); 
 			ttdoc.add_text(self.pubdate, bm.pubdate.as_ref().unwrap_or(&empty_str));
 			ttdoc.add_text(self.moddate, &bm.moddate.as_ref().unwrap_or(&empty_str));
 			ttdoc.add_text(self.cover_mime, &bm.cover_mime.as_ref().unwrap_or(&empty_str));
@@ -377,7 +377,7 @@ impl TantivyReader {
 			subject: self.get_tags("tags", &doc),
 			file: self.get_doc_str("file", &doc, &schema).unwrap(),
 			filesize: self.get_doc_i64("filesize", &doc, &schema),
-			modtime: self.get_doc_i64("modtime", &doc, &schema),
+			modtime: DateTime::parse_from_rfc3339(&self.get_doc_datetime("modtime", &doc, &schema)).unwrap().with_timezone(&Utc),
 			pubdate: self.get_doc_str("pubdate", &doc, &schema),
 			moddate: self.get_doc_str("moddate", &doc, &schema),
 			cover_mime: self.get_doc_str("cover_mime", &doc, &schema),
@@ -394,6 +394,10 @@ impl TantivyReader {
 
 	fn get_doc_i64(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> i64 {
 		doc.get_first(schema.get_field(field).unwrap()).unwrap().i64_value().unwrap()
+	}
+
+	fn get_doc_datetime(&self, field: &str, doc: &tantivy::Document, schema: &Schema) -> String {
+		doc.get_first(schema.get_field(field).unwrap()).unwrap().date_value().unwrap().to_rfc3339()
 	}
 
 	fn get_tags(&self, _field: &str, doc: &tantivy::Document) -> Option<Vec<String>> {
