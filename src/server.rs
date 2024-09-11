@@ -297,19 +297,19 @@ impl Server {
 										Err(_) => return Response::empty_404(),
 									};
 									match epub.get_cover() {
-										Ok(cover) => {
+										Some(cover) => {
 												let cover_id_opt = &epub.get_cover_id();
 												let cover_id = match cover_id_opt {
-													Ok(id) => id,
-													Err(_) => {println!("No cover id in book {}", id); return Response::empty_404()},
+													Some(id) => id,
+													None => {println!("No cover id in book {}", id); return Response::empty_404()},
 												};
 												let mime = match epub.get_resource_mime(cover_id) {
-													Ok(mime) => mime,
-													Err(_) => {println!("No mime in book {}", id); return Response::empty_404()},
+													Some(mime) => mime,
+													None => {println!("No mime in book {}", id); return Response::empty_404()},
 												};
-												Response::from_data(mime, cover).with_additional_header("Access-Control-Allow-Origin", "*")
+												Response::from_data(mime, cover.0).with_additional_header("Access-Control-Allow-Origin", "*")
 											},
-										Err(_) => Response::empty_404(),
+										None => Response::empty_404(),
 									}
 								}
 							},

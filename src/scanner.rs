@@ -7,16 +7,16 @@ use std::error::Error;
 use std::fs;
 use std::fs::File;
 
+use chrono::prelude::*;
 use std::io::Write;
 use std::path::Path;
 use std::process;
 use std::time::SystemTime;
 use walkdir::WalkDir;
-use chrono::prelude::*;
 
 use crate::sqlite::Sqlite;
-use crate::{AuthorCount, BookMetadata, PublisherCount, TagCount};
 use crate::BookWriter;
+use crate::{AuthorCount, BookMetadata, PublisherCount, TagCount};
 
 //TODO move these params to struct & pass struct instead
 pub fn scan_dirs(
@@ -73,8 +73,9 @@ pub fn scan_dirs(
 						processed += 1;
 
 						if processed % 10000 == 0 || processed == total_books {
-							let bms:Vec<BookMetadata> = book_batch.par_iter().map( |book_path| {
-								match parse_epub( book_path, use_coverdir, coverdir) {
+							let bms: Vec<BookMetadata> = book_batch
+								.par_iter()
+								.map(|book_path| match parse_epub(book_path, use_coverdir, coverdir) {
 									Ok(bm) => {
 										if !seen_bookids.read().unwrap().contains(&bm.id) {
 											seen_bookids.write().unwrap().insert(bm.id);
@@ -89,10 +90,10 @@ pub fn scan_dirs(
 										*error_lock += 1;
 										None
 									}
-								}
-							}).filter(|bmo| bmo.is_some())
-							  .map(|bms| bms.unwrap())
-							  .collect();
+								})
+								.filter(|bmo| bmo.is_some())
+								.map(|bms| bms.unwrap())
+								.collect();
 
 							wrote += bms.len() as u64;
 
@@ -111,7 +112,6 @@ pub fn scan_dirs(
 							batch_start = SystemTime::now();
 
 							book_batch.clear();
-
 						}
 					}
 				}
@@ -125,7 +125,12 @@ pub fn scan_dirs(
 
 	report_final(total_books, wrote, *errored.lock().unwrap(), scan_start);
 
-	println!("Writing counts to sqlite - {} creators, {} publishers, {} tags", creator_counts.len(), publisher_counts.len(), tags.len());
+	println!(
+		"Writing counts to sqlite - {} creators, {} publishers, {} tags",
+		creator_counts.len(),
+		publisher_counts.len(),
+		tags.len()
+	);
 	sqlite_writer.make_db()?;
 	sqlite_writer.write_counts::<AuthorCount>(creator_counts)?;
 	sqlite_writer.write_counts::<PublisherCount>(publisher_counts)?;
@@ -154,13 +159,12 @@ fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Res
 		},
 	};
 
-	let cover_img = if use_coverdir { doc.get_cover().ok() } else { None };
+	let cover_img = if use_coverdir { doc.get_cover() } else { None };
 
-	let cover_mime = 
-		match doc.get_cover_id() {
-			Ok(cover_id) => doc.get_resource_mime(&cover_id).ok(),
-			Err(_) => None,
-		};
+	let cover_mime = match doc.get_cover_id() {
+		Some(cover_id) => doc.get_resource_mime(&cover_id),
+		None => None,
+	};
 
 	let file = match Path::new(&book_loc).canonicalize() {
 		Ok(f) => f.display().to_string(),
@@ -194,7 +198,7 @@ fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Res
 					eprintln!("Could not create cover file for {}", &book_loc);
 					Err(e)
 				})?;
-				file.write_all(&cover).or_else(|e| {
+				file.write_all(&cover.0).or_else(|e| {
 					eprintln!("Error writing to cover dir for {}", &book_loc);
 					Err(e)
 				})?;
@@ -262,13 +266,14 @@ fn report_progress(processed: u64, total_books: u64, wrote: u64, batch_start: Sy
 	}
 }
 
-fn report_final( total_books: u64, wrote: u64, errored_books: u64, scan_start: SystemTime) {
+fn report_final(total_books: u64, wrote: u64, errored_books: u64, scan_start: SystemTime) {
 	match SystemTime::now().duration_since(scan_start) {
 		Ok(n) => {
 			let millis = n.as_secs() * 1000 + u64::from(n.subsec_millis());
 			let actual_bps = (1000f64 / millis as f64) * wrote as f64;
 			let processed_bps = (1000f64 / millis as f64) * total_books as f64;
-			println!("Completed. Actual: {}bps Total processed: {}bps Total written: {} Errored: {} Duplicates: {} Duration(s): {}",
+			println!(
+				"Completed. Actual: {}bps Total processed: {}bps Total written: {} Errored: {} Duplicates: {} Duration(s): {}",
 				actual_bps,
 				processed_bps,
 				wrote,
