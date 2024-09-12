@@ -7,7 +7,6 @@ use std::error::Error;
 use std::fs;
 use std::fs::File;
 
-use chrono::prelude::*;
 use std::io::Write;
 use std::path::Path;
 use std::process;
@@ -147,17 +146,9 @@ pub fn scan_dirs(
 fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<dyn Error>> {
 	let mut doc = EpubDoc::new(&book_loc)?;
 	let metadata = fs::metadata(&book_loc)?;
-	let modtime = match metadata
+	let modtime = metadata
 		.modified()
-		.unwrap_or(std::time::UNIX_EPOCH)
-		.duration_since(std::time::UNIX_EPOCH)
-	{
-		Ok(t) => DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(t.as_secs() as i64, 0), Utc),
-		Err(_) => match std::time::UNIX_EPOCH.duration_since(metadata.modified().unwrap_or(std::time::UNIX_EPOCH)) {
-			Ok(t) => DateTime::<Utc>::from_utc(NaiveDateTime::from_timestamp(-(t.as_secs() as i64), 0), Utc),
-			Err(_) => panic!("Impossible time for {}", &book_loc),
-		},
-	};
+		.unwrap_or(std::time::UNIX_EPOCH).into();
 
 	let cover_img = if use_coverdir { doc.get_cover() } else { None };
 

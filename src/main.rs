@@ -83,21 +83,6 @@ pub struct TagCount {
 	count:u32,
 }
 
-trait DbInfo {
-	fn get_table() -> String;
-	fn get_pkcol() -> String;
-}
-
-impl DbInfo for AuthorCount {
-	fn get_table() -> String {
-		"authors".to_string()
-	}
-
-	fn get_pkcol() -> String {
-		"author".to_string()
-	}
-}
-
 //A navigation category (primarily for opds)
 #[derive(Debug, Serialize)]
 pub struct OpdsCategory {
@@ -124,9 +109,8 @@ impl OpdsCategory {
 //lifted from https://github.com/serde-rs/json/issues/329
 mod string {
 	use std::fmt::Display;
-	use std::str::FromStr;
 
-	use serde::{de, Deserialize, Deserializer, Serializer};
+	use serde::Serializer;
 
 	pub fn serialize<T, S>(value: &T, serializer: S) -> Result<S::Ok, S::Error>
 	where
@@ -134,15 +118,6 @@ mod string {
 		S: Serializer,
 	{
 		serializer.collect_str(value)
-	}
-
-	pub fn deserialize<'de, T, D>(deserializer: D) -> Result<T, D::Error>
-	where
-		T: FromStr,
-		T::Err: Display,
-		D: Deserializer<'de>,
-	{
-		String::deserialize(deserializer)?.parse().map_err(de::Error::custom)
 	}
 }
 

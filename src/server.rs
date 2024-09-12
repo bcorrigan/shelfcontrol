@@ -24,7 +24,7 @@ pub struct Server {
 	pub reader: TantivyReader,
 	pub sqlite: Sqlite,
 	pub host: String,
-	pub port: u32,
+	pub port: u16,
 	pub use_coverdir: bool,
 	pub coverdir: Option<String>,
 }
@@ -43,7 +43,7 @@ impl fmt::Display for ServerError {
 }
 
 impl Server {
-	pub fn new(reader: TantivyReader, sqlite: Sqlite, host: &str, port: u32, use_coverdir: bool, coverdir: Option<String>) -> Result<Server, ServerError> {
+	pub fn new(reader: TantivyReader, sqlite: Sqlite, host: &str, port: u16, use_coverdir: bool, coverdir: Option<String>) -> Result<Server, ServerError> {
 		Ok(Server {
 			reader,
 			sqlite,
@@ -58,7 +58,7 @@ impl Server {
 	pub fn serve(self) -> Result<(), tantivy::TantivyError> {
 		println!("Starting server on localhost:8000");
 
-		rouille::start_server("localhost:8000", move |request| {
+		rouille::start_server((self.host.to_owned(), self.port), move |request| {
 			rouille::log(&request, io::stdout(), || {
 				router!(request,
 					(GET) (/api/search) => {

@@ -1,4 +1,4 @@
-use rusqlite::{params, Connection, Result};
+use rusqlite::{params, Result};
 use r2d2_sqlite::SqliteConnectionManager;
 use r2d2::Pool;
 use serde::Serialize;
