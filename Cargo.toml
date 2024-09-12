@@ -4,7 +4,7 @@ version = "0.1.0"
 authors = ["bcorrigan <b.j.corrigan@gmail.com>"]
 build = "src/build.rs"
 license="GPL-3.0-or-later"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 #epub = "^1.2"
@@ -15,17 +15,17 @@ clap = "^2"
 r2d2 = "^0.8"
 r2d2_sqlite = "^0"
 tantivy = "^0.16"
-rusqlite = "^0.26"
+rusqlite = "^0.32"
 rayon = "^1.5"
 walkdir = "^2" 
 chrono = {version = "^0.4", features=["serde"]} #not that well maintained tho not dead - maybe roll own
-rouille = "3" #dead project so need to replace
+rouille = "3"
 serde_json = "^1.0"
 serde = "^1"
 serde_derive = "^1"
-ammonia = "3"
+ammonia = "4"
 maplit = "1" # dead, get rid of it
-itertools = "^0.10" #only used for string.join so should look to remove
+itertools = "^0.13" #only used for string.join so should look to remove
 failure = "^0.1" #deprecated - move to Anyhow or thiserror
 futures = "^0.3"
 urlencoding = "^2"
