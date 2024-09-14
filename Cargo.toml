@@ -26,8 +26,7 @@ itertools = "^0.13" #only used for string.join so should look to remove
 failure = "^0.1" #deprecated - move to Anyhow or thiserror
 futures = "^0.3"
 urlencoding = "^2"
+serial_test = "^3.1" #doesn't work as a build-dependency for baffling reasons
 
 [build-dependencies]
 ructe = "^0.17"
-
-
