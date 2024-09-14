@@ -11,11 +11,12 @@ epub = { git = "https://github.com/danigm/epub-rs" }
 clap = {version = "^4", features=["derive"]}
 r2d2 = "^0.8"
 r2d2_sqlite = "^0"
-tantivy = "^0.16"
+tantivy = "^0.22"
 rusqlite = "^0.32"
 rayon = "^1.5"
-walkdir = "^2" 
-chrono = {version = "^0.4", features=["serde"]}
+walkdir = "^2"
+time = {version="^0.3", features=["serde", "formatting", "macros"]}
+#chrono = {version = "^0.4", features=["serde"]}
 rouille = "3"
 serde_json = "^1.0"
 serde = "^1"

@@ -1,7 +1,6 @@
 #[macro_use]
 extern crate clap;
 extern crate ammonia;
-extern crate chrono;
 extern crate epub;
 extern crate r2d2;
 extern crate r2d2_sqlite;
@@ -23,8 +22,8 @@ extern crate serde;
 extern crate serde_json;
 extern crate urlencoding;
 
-use chrono::{DateTime, Utc};
 use clap::{Parser, Subcommand};
+use server::Server;
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::error::Error;
@@ -32,8 +31,7 @@ use std::hash::{Hash, Hasher};
 use std::io;
 use std::path::Path;
 use std::process;
-
-use server::Server;
+use time::OffsetDateTime;
 
 use crate::sqlite::Sqlite;
 
@@ -59,7 +57,7 @@ pub struct BookMetadata {
 	#[serde(skip)]
 	file: String,
 	filesize: i64,
-	modtime: DateTime<Utc>,
+	modtime: OffsetDateTime,
 	pubdate: Option<String>,
 	moddate: Option<String>,
 	cover_mime: Option<String>,
@@ -131,7 +129,7 @@ fn test_unmangle_tags() {
 		subject: Some(vec!["Contemporary romance fiction; contemporary romance; contemporary women’s fiction; romance; Small Town & Rural; Women’s Fiction; Opposites attract".to_string()]), //aka tags
 		file: "test_file".to_string(),
 		filesize: 0,
-		modtime: Utc::now(),
+		modtime: OffsetDateTime::now_local().unwrap(),
 		pubdate: None,
 		moddate: None,
 		cover_mime: None,

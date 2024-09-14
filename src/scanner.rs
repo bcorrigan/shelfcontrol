@@ -1,4 +1,3 @@
-use chrono::{DateTime, Local};
 use epub::doc::EpubDoc;
 use itertools::Itertools;
 use rayon::prelude::*;
@@ -7,15 +6,17 @@ use std::error::Error;
 use std::fs;
 use std::fs::File;
 
+use crate::sqlite::Sqlite;
+use crate::BookWriter;
+use crate::{AuthorCount, BookMetadata, PublisherCount, TagCount};
 use std::io::Write;
 use std::path::Path;
 use std::process;
 use std::time::SystemTime;
+use time::format_description::BorrowedFormatItem;
+use time::macros::format_description;
+use time::{Duration, OffsetDateTime};
 use walkdir::WalkDir;
-
-use crate::sqlite::Sqlite;
-use crate::BookWriter;
-use crate::{AuthorCount, BookMetadata, PublisherCount, TagCount};
 
 //TODO move these params to struct & pass struct instead
 pub fn scan_dirs(
@@ -170,7 +171,7 @@ fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: &str) -> Result<Book
 		publisher: get_first_fd("publisher", &doc.metadata),
 		creator: get_first_fd("creator", &doc.metadata).map(unmangle_creator),
 		subject: doc.metadata.get("subject").cloned(),
-		file: file,
+		file,
 		filesize: metadata.len() as i64,
 		modtime,
 		pubdate: get_first_fd("date", &doc.metadata),
@@ -238,22 +239,24 @@ fn report_progress(processed: u64, total_books: u64, wrote: u64, batch_start: Sy
 
 			let total_secs = SystemTime::now().duration_since(scan_start).unwrap().as_secs();
 			let total_bps = processed as f64 / total_secs as f64;
-			let est_secs = chrono::Duration::seconds(((total_books - processed) as f64 / total_bps) as i64);
+			let est_secs = ((total_books - processed) as f64 / total_bps) as i64;
 
-			let local: DateTime<Local> = Local::now();
-			let end_time = local.checked_add_signed(est_secs).unwrap();
+			let local = OffsetDateTime::now_local().unwrap();
+			let end_time = local.checked_add(Duration::seconds(est_secs)).unwrap();
 
 			println!(
 				"Batch rate: {}bps. Wrote {}. Overall {}bps, estimated completion at {}",
 				bps,
 				&wrote,
 				total_bps,
-				end_time.to_rfc2822()
+				end_time.format(FORMAT).unwrap(),
 			);
 		}
 		Err(_) => panic!("Time went backwards."),
 	}
 }
+
+const FORMAT: &[BorrowedFormatItem<'_>] = format_description!("[hour]:[minute]:[second]");
 
 fn report_final(total_books: u64, wrote: u64, errored_books: u64, scan_start: SystemTime) {
 	match SystemTime::now().duration_since(scan_start) {

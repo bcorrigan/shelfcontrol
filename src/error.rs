@@ -57,7 +57,23 @@ impl From<QueryParserError> for StoreError {
 impl From<QueryParserError> for ClientError {
 	fn from(qpe: QueryParserError) -> ClientError {
 		match qpe {
-			SyntaxError => ClientError {
+			ExpectedBool(_) => ClientError {
+				name: "Expected a boolean".to_string(),
+				msg: "Expected a boolean ie true or false".to_string(),
+			},
+			PhrasePrefixRequiresAtLeastTwoTerms { phrase: _, tokenizer: _ } => ClientError {
+				name: "Phrase prefix error".to_string(),
+				msg: "The phrase prefix requires at least two terms".to_string(),
+			},
+			UnsupportedQuery(_) => ClientError {
+				name: "Unsupported query".to_string(),
+				msg: "The query you supplied is not supported".to_string(),
+			},
+			IpFormatError(_) => ClientError {
+				name: "IP Format Error".to_string(),
+				msg: "Does not match an IP address.".to_string(),
+			},
+			SyntaxError(_) => ClientError {
 				name: "Syntax Error".to_string(),
 				msg: "There was a syntax error in the search string.".to_string(),
 			},
@@ -89,7 +105,7 @@ impl From<QueryParserError> for ClientError {
 				name: "Field unknown".to_string(),
 				msg: format!("The field you searched for is unknown:{}", s),
 			},
-			UnknownTokenizer(_, _) => ClientError {
+			UnknownTokenizer { tokenizer: _, field: _ } => ClientError {
 				name: "Unknown Tokenizer".to_string(),
 				msg: "The tokenizer for the given field is unknown".to_string(),
 			},
