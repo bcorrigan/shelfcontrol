@@ -14,9 +14,9 @@ use std::io::prelude::*;
 
 use crate::search_result::OpdsPage;
 use crate::OpdsCategory;
-use crate::{TagCount,AuthorCount,PublisherCount};
+use crate::{AuthorCount, PublisherCount, TagCount};
 
-use urlencoding::{encode, decode};
+use urlencoding::{decode, encode};
 
 include!(concat!(env!("OUT_DIR"), "/templates.rs"));
 
@@ -26,7 +26,7 @@ pub struct Server {
 	pub host: String,
 	pub port: u16,
 	pub use_coverdir: bool,
-	pub coverdir: Option<String>,
+	pub coverdir: String,
 }
 
 #[derive(Debug)]
@@ -43,15 +43,15 @@ impl fmt::Display for ServerError {
 }
 
 impl Server {
-	pub fn new(reader: TantivyReader, sqlite: Sqlite, host: &str, port: u16, use_coverdir: bool, coverdir: Option<String>) -> Result<Server, ServerError> {
-		Ok(Server {
+	pub fn new(reader: TantivyReader, sqlite: Sqlite, host: String, port: u16, use_coverdir: bool, coverdir: String) -> Server {
+		Server {
 			reader,
 			sqlite,
-			host: host.to_string(),
+			host,
 			port,
 			use_coverdir,
 			coverdir,
-		})
+		}
 	}
 
 	#[allow(unreachable_code)]
@@ -154,7 +154,7 @@ impl Server {
 						};
 					},
 					(GET) (/api/opensearch) => {
-						Response::text("<?xml version=\"1.0\" encoding=\"UTF-8\"?>  
+						Response::text("<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 						<OpenSearchDescription xmlns=\"http://a9.com/-/spec/opensearch/1.1/\">
 						  <ShortName>ShelfControl</ShortName>
 						  <InputEncoding>UTF-8</InputEncoding>
@@ -205,7 +205,7 @@ impl Server {
 						);
 
 						let mut buf = Vec::new();
-						match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"2021-01-21T10:56:30+01:00".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &None, &Some(navs)) { 
+						match templates::opds_html(&mut buf, &OpdsPage {id:"1".to_string(),date:"2021-01-21T10:56:30+01:00".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &None, &Some(navs)) {
 							Ok(_) => return Response::from_data("application/xml", buf),
 							Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
 						}
@@ -217,7 +217,7 @@ impl Server {
 							Some(cat) => (cat.to_string(), None),
 							None => ("".to_string(), Some("*"))
 						};
-						
+
 						let (results, by_author) = match &request.get_param("byAuthor") {
 							Some(_) => (self.reader.count_by_field("creator", &cat_str), true),
 							None => (self.reader.categorise("creator", &cat_str, query, 100), false),
@@ -245,7 +245,7 @@ impl Server {
 						}).collect();
 
 						let mut buf = Vec::new();
-						match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"2021-01-21T10:56:30+01:00".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &None, &Some(navs)) { 
+						match templates::opds_html(&mut buf, &OpdsPage {id:"1".to_string(),date:"2021-01-21T10:56:30+01:00".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &None, &Some(navs)) {
 							Ok(_) => return Response::from_data("application/xml", buf),
 							Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
 						}
@@ -259,7 +259,7 @@ impl Server {
 						}.trim();
 
 						let mut buf = Vec::new();
-						match templates::opds(&mut buf, &OpdsPage {id:"1".to_string(),date:"2021-01-21T10:56:30+01:00".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &self.reader.search(query_str, 0, 2000).ok(), &None) { 
+						match templates::opds_html(&mut buf, &OpdsPage {id:"1".to_string(),date:"2021-01-21T10:56:30+01:00".to_string(),title:"ShelfControl".to_string(),url:"localhost:8000".to_string()}, &self.reader.search(query_str, 0, 2000).ok(), &None) {
 							Ok(_) => return Response::from_data("application/xml", buf),
 							Err(e) => {println!("Error {:?}", e);self.get_json_error_response("OPDS error", "OPDS Error")},
 						}
@@ -279,7 +279,7 @@ impl Server {
 										return Response::empty_404();
 									}
 
-									let mut imgfile = match File::open(format!("{}/{}",self.coverdir.clone().unwrap_or(".".to_string()),id)) {
+									let mut imgfile = match File::open(format!("{}/{}",self.coverdir,id)) {
 										Ok(file) => file,
 										Err(_) => {println!("Could not open img {}.", id); return Response::empty_404()},
 									};

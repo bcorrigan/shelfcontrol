@@ -1,15 +1,14 @@
-//use std::env;
 #[macro_use]
 extern crate clap;
 extern crate ammonia;
 extern crate chrono;
-extern crate rayon;
 extern crate epub;
-extern crate tantivy;
-extern crate walkdir;
 extern crate r2d2;
 extern crate r2d2_sqlite;
+extern crate rayon;
 extern crate rusqlite;
+extern crate tantivy;
+extern crate walkdir;
 #[macro_use]
 extern crate maplit;
 #[macro_use]
@@ -25,7 +24,7 @@ extern crate serde_json;
 extern crate urlencoding;
 
 use chrono::{DateTime, Utc};
-use clap::{App, Arg};
+use clap::{Parser, Subcommand};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashMap;
 use std::error::Error;
@@ -42,9 +41,9 @@ mod error;
 mod scanner;
 mod search_result;
 mod server;
+mod sqlite;
 mod test;
 mod ttvy;
-mod sqlite;
 
 //to embed resources use rust-embed or include_str
 
@@ -68,19 +67,19 @@ pub struct BookMetadata {
 #[derive(Debug, Serialize)]
 pub struct AuthorCount {
 	creator: String,
-	count:u32,
+	count: u32,
 }
 
 #[derive(Debug, Serialize)]
 pub struct PublisherCount {
 	publisher: String,
-	count:u32,
+	count: u32,
 }
 
 #[derive(Debug, Serialize)]
 pub struct TagCount {
 	tag: String,
-	count:u32,
+	count: u32,
 }
 
 //A navigation category (primarily for opds)
@@ -123,7 +122,6 @@ mod string {
 
 #[test]
 fn test_unmangle_tags() {
-
 	let mut testbm = BookMetadata {
 		id: 0,
 		title: None,
@@ -154,12 +152,16 @@ fn test_unmangle_tags() {
 	testbm.add_tags(&mut tagmap);
 	assert_eq!(1, tagmap.len());
 
-	testbm.subject = Some(vec!["FIC027020  FICTION / Romance / Contemporary; FIC044000  FICTION / Contemporary Women".to_string()]);
+	testbm.subject = Some(vec![
+		"FIC027020  FICTION / Romance / Contemporary; FIC044000  FICTION / Contemporary Women".to_string(),
+	]);
 	tagmap = HashMap::new();
 	testbm.add_tags(&mut tagmap);
 	assert_eq!(4, tagmap.len());
 
-	testbm.subject = Some(vec!["Fiction / Action & Adventure, Fiction / Fantasy / Epic, Fiction / Fantasy / Historical, Fiction / War & Military".to_string()]);
+	testbm.subject = Some(vec![
+		"Fiction / Action & Adventure, Fiction / Fantasy / Epic, Fiction / Fantasy / Historical, Fiction / War & Military".to_string(),
+	]);
 	tagmap = HashMap::new();
 	testbm.add_tags(&mut tagmap);
 	assert_eq!(6, tagmap.len());
@@ -176,7 +178,6 @@ fn test_unmangle_tags() {
 }
 
 impl BookMetadata {
-
 	pub fn add_tags(&self, tags: &mut HashMap<String, u32>) {
 		//add any known tags
 		if self.subject.is_some() {
@@ -187,17 +188,17 @@ impl BookMetadata {
 				let comma_count = subjectlc.matches(",").count();
 				let slash_count = subjectlc.matches("/").count();
 
-				if semi_count>comma_count && semi_count>slash_count {
+				if semi_count > comma_count && semi_count > slash_count {
 					self.split_tags(tags, ";", subjectlc);
 					continue;
-				} else if comma_count>semi_count && comma_count>slash_count {
+				} else if comma_count > semi_count && comma_count > slash_count {
 					self.split_tags(tags, ",", subjectlc);
 					continue;
 				} else if slash_count > comma_count && slash_count > semi_count {
 					self.split_tags(tags, "/", subjectlc);
 					continue;
 				} else {
-					tags.insert(subjectlc.to_string(), tags.get(subjectlc).unwrap_or(&0)+1);
+					tags.insert(subjectlc.to_string(), tags.get(subjectlc).unwrap_or(&0) + 1);
 					continue;
 				}
 			}
@@ -206,22 +207,23 @@ impl BookMetadata {
 
 	fn split_tags(&self, tags: &mut HashMap<String, u32>, delimiter: &str, subject: &str) {
 		for tag_candidate in subject.split(delimiter) {
-			if (tag_candidate.contains(delimiter) && !tag_candidate.contains(")")) 
-					   || (!tag_candidate.contains("(") && tag_candidate.contains(")"))
-					   || tag_candidate.contains("fictitious character") {
-				tags.insert(subject.to_string(), tags.get(subject).unwrap_or(&0)+1);
+			if (tag_candidate.contains(delimiter) && !tag_candidate.contains(")"))
+				|| (!tag_candidate.contains("(") && tag_candidate.contains(")"))
+				|| tag_candidate.contains("fictitious character")
+			{
+				tags.insert(subject.to_string(), tags.get(subject).unwrap_or(&0) + 1);
 				return;
 			}
 		}
 		for tag_candidate in subject.split(delimiter) {
 			let tag_candidate = tag_candidate.trim();
-			tags.insert(tag_candidate.to_string(), tags.get(tag_candidate).unwrap_or(&0)+1);
+			tags.insert(tag_candidate.to_string(), tags.get(tag_candidate).unwrap_or(&0) + 1);
 		}
 	}
 
-	pub fn add_counts(val:&Option<String>, counts: &mut HashMap<String, u32>) {
+	pub fn add_counts(val: &Option<String>, counts: &mut HashMap<String, u32>) {
 		if let Some(cat) = val {
-			counts.insert(cat.to_string(), counts.get(cat).unwrap_or(&0)+1);
+			counts.insert(cat.to_string(), counts.get(cat).unwrap_or(&0) + 1);
 		}
 	}
 
@@ -253,98 +255,91 @@ pub trait BookWriter {
 	fn write_epubs(&mut self, bms: &Vec<BookMetadata>) -> Result<(), Box<dyn Error>>;
 	fn commit(&mut self) -> Result<(), Box<dyn Error>>;
 }
+/// A fast OPDS server and epub indexer
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Cli {
+	/// Where the index is
+	#[arg(short, long, default_value = ".shelfcontrol")]
+	dbFile: String,
+
+	/// If scanning, store covers here. If serving, get covers here. By default, server will extract from epub files directly at some performance cost.
+	#[arg(short, long)]
+	coverdir: Option<String>,
+
+	#[command(subcommand)]
+	command: Command,
+}
+
+#[derive(Subcommand, Debug)]
+enum Command {
+	/// start an OPDS server
+	Serve {
+		/// Which port to listen on
+		#[arg(short, long, default_value_t = 8080)]
+		port: u16,
+
+		/// Hostname to bind to
+		#[arg(short, long, default_value = "localhost")]
+		host: String,
+	},
+
+	/// Run the indexer
+	Index {
+		/// Which directories to scan for books. Multiple directories can be specified.
+		#[arg(short, long, default_value = ".")]
+		dir: Vec<String>,
+	},
+}
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-	let matches = App::new("Epub Indexer")
-        .version("0.0.1")
-        .author("Barry Corrigan <b.j.corrigan@gmail.com>")
-        .about("Indexes epubs into sqlite or tantivy database")
-        .arg(Arg::with_name("dbfile")
-            .short("D")
-            .long("dbfile")
-            .value_name("FILE")
-            .help("This is where shelfcontrol settings and index will be located. Warning: this will erase any existing DB. Default: .shelfcontrol")
-            .required(false)
-            .takes_value(true))
-		.arg(Arg::with_name("directory")
-			.short("d")
-			.long("dir")
-			.help("Which directories to scan for books. Multiple directories can be specified. Default: .")
-			.multiple(true)
-			.takes_value(true))
-		.arg(Arg::with_name("db")
-			.short("b")
-			.long("db")
-			.help("Which db backend to use: tantivy or sqlite. Default: tantivy")
-			.takes_value(true)
-			.required(false))
-		.arg(Arg::with_name("search")
-			.short("s")
-			.long("serve")
-			.help("Serve books over http")
-			.required(false)
-			.takes_value(false))
-		.arg(Arg::with_name("coverdir")
-			.short("c")
-			.long("coverdir")
-			.help("Use this directory for cover images. If not specified the server will just extract from epub files on demand, at some performance cost.")
-			.takes_value(true)
-			.required(false))
-		.arg(Arg::with_name("threads")
-		    .short("t")
-			.long("threads")
-			.help("Number of threads to use for scanning. Default is same as number of logical CPUs.")
-			.takes_value(true)
-			.required(false))
-		.get_matches();
+	let cli = Cli::parse();
 
-	let db_dir = value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string());
+	let db_dir = cli.dbFile;
 
-	if matches.is_present("search") {
-		let sqlite = Sqlite::new(&format!("{}/counts.sqlite", &db_dir))?;
-		match ttvy::TantivyReader::new(value_t!(matches, "dbfile", String).unwrap_or_else(|_| ".shelfcontrol".to_string())) {
-			Ok(reader) => {
-				let server = Server::new(
-					reader,
-					sqlite,
-					"localhost",
-					8000,
-					false,
-					Some(value_t!(matches, "coverdir", String).unwrap_or_else(|_| ".shelfcontrol/covers".to_string())),
-				)?;
-				server.serve().expect("Could not start server.");
-			}
-			Err(e) => panic!("Could not read given index: {}", e),
-		};
-	}
-
-	let (use_coverdir, coverdir) = match matches.value_of("coverdir") {
-		Some(coverdir) => {
-			if Path::new(coverdir).exists() {
-				(true, Some(coverdir))
+	let (use_coverdir, coverdir) = match cli.coverdir {
+		Some(dir) => {
+			if Path::new(&dir).exists() {
+				(true, dir)
 			} else {
-				eprintln!("Covers directory {} does not exist.", coverdir);
+				eprintln!("Covers directory {} does not exist.", &dir);
 				process::exit(4);
 			}
 		}
-		None => (false, None),
+		None => (false, "".to_string()),
 	};
 
-	let writer: Box<dyn BookWriter + Sync + Send> = match matches.value_of("db").unwrap_or("tantivy") {
-		"tantivy" => Box::new(match ttvy::TantivyWriter::new(&db_dir) {
-			Ok(writer) => Ok(writer),
-			Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),
-		}?),
-		_ => process::exit(2),
-	};
-
-	let dirs = values_t!(matches.values_of("directory"), String).unwrap_or_else(|_| vec![".".to_string()]);
-
-	if matches.is_present("threads") {
-		let pool_size = value_t!(matches, "threads", usize).unwrap();
-		rayon::ThreadPoolBuilder::new().num_threads(pool_size).build_global()?
+	match cli.command {
+		Command::Serve { port, host } => {
+			start_server(db_dir, port, host, coverdir, use_coverdir);
+		}
+		Command::Index { dir } => {
+			start_indexer(db_dir, dir, coverdir, use_coverdir);
+		}
 	}
 
-	let sqlite = Sqlite::new(&format!("{}/counts.sqlite", &db_dir))?;
-	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer, sqlite)
+	Ok(())
+}
+
+fn start_indexer(db_dir: String, dirs: Vec<String>, coverdir: String, use_coverdir: bool) {
+	let writer: Box<dyn BookWriter + Sync + Send> = match ttvy::TantivyWriter::new(&db_dir) {
+		Ok(writer) => Ok(Box::new(writer)),
+		Err(_) => Err(Box::new(io::Error::new(io::ErrorKind::Other, "TantivyError:"))),
+	}
+	.expect("Could not create indexer, is the db directory writeable?");
+
+	let sqlite = Sqlite::new(&format!("{}/counts.sqlite", &db_dir)).expect("Could not create sqlite db.");
+	scanner::scan_dirs(dirs, coverdir, use_coverdir, writer, sqlite);
+}
+
+fn start_server(db_dir: String, port: u16, host: String, coverdir: String, use_coverdir: bool) {
+	let sqlite =
+		Sqlite::new(&format!("{}/counts.sqlite", &db_dir)).expect("Could not open sqlite db. Check dbFile directory is writeable.");
+	match ttvy::TantivyReader::new(db_dir) {
+		Ok(reader) => {
+			let server = Server::new(reader, sqlite, host, port, use_coverdir, coverdir);
+			server.serve().expect("Could not start server. Is port already bound?");
+		}
+		Err(e) => panic!("Could not read given index: {}", e),
+	};
 }

@@ -20,7 +20,7 @@ use crate::{AuthorCount, BookMetadata, PublisherCount, TagCount};
 //TODO move these params to struct & pass struct instead
 pub fn scan_dirs(
 	dirs: Vec<String>,
-	coverdir: Option<&str>,
+	coverdir: String,
 	use_coverdir: bool,
 	mut writer: Box<dyn BookWriter + Send + Sync>,
 	sqlite_writer: Sqlite,
@@ -74,7 +74,7 @@ pub fn scan_dirs(
 						if processed % 10000 == 0 || processed == total_books {
 							let bms: Vec<BookMetadata> = book_batch
 								.par_iter()
-								.map(|book_path| match parse_epub(book_path, use_coverdir, coverdir) {
+								.map(|book_path| match parse_epub(book_path, use_coverdir, &coverdir) {
 									Ok(bm) => {
 										if !seen_bookids.read().unwrap().contains(&bm.id) {
 											seen_bookids.write().unwrap().insert(bm.id);
@@ -143,12 +143,10 @@ pub fn scan_dirs(
 	Ok(())
 }
 
-fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Result<BookMetadata, Box<dyn Error>> {
+fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: &str) -> Result<BookMetadata, Box<dyn Error>> {
 	let mut doc = EpubDoc::new(&book_loc)?;
 	let metadata = fs::metadata(&book_loc)?;
-	let modtime = metadata
-		.modified()
-		.unwrap_or(std::time::UNIX_EPOCH).into();
+	let modtime = metadata.modified().unwrap_or(std::time::UNIX_EPOCH).into();
 
 	let cover_img = if use_coverdir { doc.get_cover() } else { None };
 
@@ -185,7 +183,7 @@ fn parse_epub(book_loc: &str, use_coverdir: bool, coverdir: Option<&str>) -> Res
 	if use_coverdir {
 		match cover_img {
 			Some(cover) => {
-				let mut file = File::create(format!("{}/{}", coverdir.unwrap(), &bm.id)).or_else(|e| {
+				let mut file = File::create(format!("{}/{}", coverdir, &bm.id)).or_else(|e| {
 					eprintln!("Could not create cover file for {}", &book_loc);
 					Err(e)
 				})?;

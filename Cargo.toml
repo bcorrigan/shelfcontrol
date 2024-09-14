@@ -7,18 +7,15 @@ license="GPL-3.0-or-later"
 edition = "2021"
 
 [dependencies]
-#epub = "^1.2"
 epub = { git = "https://github.com/danigm/epub-rs" }
-#epub = { path = "/home/bc/workspace/epub-rs", version = "1.2.0" }
-#rusqlite = "0.15.0"
-clap = "^2"
+clap = {version = "^4", features=["derive"]}
 r2d2 = "^0.8"
 r2d2_sqlite = "^0"
 tantivy = "^0.16"
 rusqlite = "^0.32"
 rayon = "^1.5"
 walkdir = "^2" 
-chrono = {version = "^0.4", features=["serde"]} #not that well maintained tho not dead - maybe roll own
+chrono = {version = "^0.4", features=["serde"]}
 rouille = "3"
 serde_json = "^1.0"
 serde = "^1"
@@ -31,6 +28,6 @@ futures = "^0.3"
 urlencoding = "^2"
 
 [build-dependencies]
-ructe = "^0.13"
+ructe = "^0.17"
 
 
