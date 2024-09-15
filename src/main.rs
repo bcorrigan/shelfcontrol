@@ -285,7 +285,7 @@ enum Command {
 	/// Run the indexer
 	Index {
 		/// Which directories to scan for books. Multiple directories can be specified.
-		#[arg(short, long, default_value = ".")]
+		#[arg(short, long, default_value = ".", num_args=1.., value_parser)]
 		dir: Vec<String>,
 	},
 }
