@@ -129,7 +129,7 @@ fn test_unmangle_tags() {
 		subject: Some(vec!["Contemporary romance fiction; contemporary romance; contemporary women’s fiction; romance; Small Town & Rural; Women’s Fiction; Opposites attract".to_string()]), //aka tags
 		file: "test_file".to_string(),
 		filesize: 0,
-		modtime: OffsetDateTime::now_local().unwrap(),
+		modtime: OffsetDateTime::now_utc(),
 		pubdate: None,
 		moddate: None,
 		cover_mime: None,

@@ -425,7 +425,9 @@ impl TantivyReader {
 		let mut tags = Vec::new();
 
 		for v in vals {
-			tags.push(v.as_str().unwrap_or("").to_string());
+			//println!("{:?}", (v as &Facet));
+			tags.push(v.as_facet().unwrap().encoded_str().to_string());
+			//tags.push(v.as_str().unwrap_or("").to_string());
 		}
 
 		if tags.len() == 0 {

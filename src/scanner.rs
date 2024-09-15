@@ -241,7 +241,7 @@ fn report_progress(processed: u64, total_books: u64, wrote: u64, batch_start: Sy
 			let total_bps = processed as f64 / total_secs as f64;
 			let est_secs = ((total_books - processed) as f64 / total_bps) as i64;
 
-			let local = OffsetDateTime::now_local().unwrap();
+			let local = OffsetDateTime::now_utc();
 			let end_time = local.checked_add(Duration::seconds(est_secs)).unwrap();
 
 			println!(
