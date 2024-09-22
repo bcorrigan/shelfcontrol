@@ -46,7 +46,6 @@ pub fn scan_dirs(
 		for entry in WalkDir::new(&dir).into_iter().filter_entry(|e| !is_hidden(e)) {
 			match entry {
 				Ok(l) => {
-					println!("{:?}", &l);
 					if l.file_type().is_file() && l.path().display().to_string().ends_with(".epub") {
 						total_books += 1;
 					}
