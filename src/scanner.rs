@@ -18,12 +18,8 @@ use time::macros::format_description;
 use time::{Duration, OffsetDateTime};
 use walkdir::{DirEntry, WalkDir};
 
-fn is_epub(entry: &DirEntry) -> bool {
-	entry
-		.file_name()
-		.to_str()
-		.map(|s| !s.starts_with(".") || s.ends_with(".epub"))
-		.unwrap_or(false)
+fn is_hidden(entry: &DirEntry) -> bool {
+	entry.file_name().to_str().map(|s| !s.starts_with(".")).unwrap_or(false)
 }
 
 //TODO move these params to struct & pass struct instead
@@ -47,10 +43,10 @@ pub fn scan_dirs(
 	let mut total_books: u64 = 0;
 
 	for dir in &dirs {
-		for entry in WalkDir::new(&dir).into_iter().filter_entry(|e| !is_epub(e)) {
+		for entry in WalkDir::new(&dir).into_iter().filter_entry(|e| !is_hidden(e)) {
 			match entry {
 				Ok(l) => {
-					if l.file_type().is_file() {
+					if l.file_type().is_file() && l.into_path().ends_with(".epub") {
 						total_books += 1;
 					}
 				}
@@ -75,10 +71,10 @@ pub fn scan_dirs(
 
 	for dir in &dirs {
 		let walker = WalkDir::new(&dir).into_iter();
-		for entry in walker.filter_entry(|e| !is_epub(e)) {
+		for entry in walker.filter_entry(|e| !is_hidden(e)) {
 			match entry {
 				Ok(l) => {
-					if l.file_type().is_file() {
+					if l.file_type().is_file() && l.path().starts_with(".epub") {
 						book_batch.push(l.path().display().to_string());
 
 						processed += 1;
