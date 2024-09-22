@@ -16,9 +16,20 @@ use std::time::SystemTime;
 use time::format_description::BorrowedFormatItem;
 use time::macros::format_description;
 use time::{Duration, OffsetDateTime};
-use walkdir::WalkDir;
+use walkdir::{DirEntry, WalkDir};
+
+fn is_epub(entry: &DirEntry) -> bool {
+	entry
+		.file_name()
+		.to_str()
+		.map(|s| !s.starts_with(".") || s.ends_with(".epub"))
+		.unwrap_or(false)
+}
 
 //TODO move these params to struct & pass struct instead
+//TODO Could this be more intelligently parallelised across different devices?
+// Scanning is IO bound unless on an nvme ssd or something. Therefore if dir A is on /dev/sdb and dir B is on /mnt/synology,
+// scanning across both devices in parrallel can better utilise CPU and get speed ups?
 pub fn scan_dirs(
 	dirs: Vec<String>,
 	coverdir: String,
@@ -36,10 +47,10 @@ pub fn scan_dirs(
 	let mut total_books: u64 = 0;
 
 	for dir in &dirs {
-		for entry in WalkDir::new(&dir).into_iter() {
+		for entry in WalkDir::new(&dir).into_iter().filter_entry(|e| !is_epub(e)) {
 			match entry {
 				Ok(l) => {
-					if l.path().display().to_string().ends_with(".epub") && l.file_type().is_file() {
+					if l.file_type().is_file() {
 						total_books += 1;
 					}
 				}
@@ -64,15 +75,15 @@ pub fn scan_dirs(
 
 	for dir in &dirs {
 		let walker = WalkDir::new(&dir).into_iter();
-		for entry in walker {
+		for entry in walker.filter_entry(|e| !is_epub(e)) {
 			match entry {
 				Ok(l) => {
-					if l.path().display().to_string().ends_with(".epub") && l.file_type().is_file() {
+					if l.file_type().is_file() {
 						book_batch.push(l.path().display().to_string());
 
 						processed += 1;
 
-						if processed % 10000 == 0 || processed == total_books {
+						if processed % 10000 == 0 || processed >= total_books {
 							let bms: Vec<BookMetadata> = book_batch
 								.par_iter()
 								.map(|book_path| match parse_epub(book_path, use_coverdir, &coverdir) {
