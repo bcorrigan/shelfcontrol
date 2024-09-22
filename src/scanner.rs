@@ -19,7 +19,7 @@ use time::{Duration, OffsetDateTime};
 use walkdir::{DirEntry, WalkDir};
 
 fn is_hidden(entry: &DirEntry) -> bool {
-	entry.file_name().to_str().map(|s| !s.starts_with(".")).unwrap_or(false)
+	entry.file_name().to_str().map(|s| s.starts_with(".")).unwrap_or(false)
 }
 
 //TODO move these params to struct & pass struct instead
@@ -46,7 +46,8 @@ pub fn scan_dirs(
 		for entry in WalkDir::new(&dir).into_iter().filter_entry(|e| !is_hidden(e)) {
 			match entry {
 				Ok(l) => {
-					if l.file_type().is_file() && l.into_path().ends_with(".epub") {
+					println!("{:?}", &l);
+					if l.file_type().is_file() && l.path().display().to_string().ends_with(".epub") {
 						total_books += 1;
 					}
 				}
@@ -74,7 +75,7 @@ pub fn scan_dirs(
 		for entry in walker.filter_entry(|e| !is_hidden(e)) {
 			match entry {
 				Ok(l) => {
-					if l.file_type().is_file() && l.path().starts_with(".epub") {
+					if l.file_type().is_file() && l.path().display().to_string().ends_with(".epub") {
 						book_batch.push(l.path().display().to_string());
 
 						processed += 1;
