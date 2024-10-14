@@ -1,22 +1,21 @@
 <template>
-  <v-container fluid fill-height class="grey lighten-4">
-    <v-layout align-center>
-      <v-flex>
+  <v-container fluid fill-height >
+    <v-row align-center >
+      <v-col>
         <span v-html="errorMsg"></span>
-        <v-list two-line>
-          <v-subheader v-if="count" :key="count" inset id="resultList">
+        <v-list two-line >
+          <v-list-subheader v-if="count" :key="count" inset id="resultList">
             {{ position + 1 }}-{{ Math.min(position + 20, count) }} of
             {{ count }} results for "{{ lastquery }}"
-          </v-subheader>
+          </v-list-subheader>
           <span v-for="(book, index) in books" :key="book.id">
             <v-card style="word-break: normal">
-              <v-row no-gutters>
-                <v-col cols="12" sm="6">
-                  <v-flex class="py-8">
-                    <v-img
+              <!--<v-img
                       class="white--text"
                       height="400"
-                      contain
+                      color="surface-variant"
+                      cover="false"
+                      contain="false"
                       style="cursor: pointer"
                       :src="'http://localhost:8080/img/' + book.id"
                       @click="
@@ -24,106 +23,125 @@
                         coverdialog = true;
                       "
                     >
-                    </v-img>
-                  </v-flex>
-                </v-col>
-                <v-col cols="12" sm="6">
-                  <v-card-title style="word-break: normal">
-                    <div>
-                      <h2>
-                        <span class="grey--text text--darken-3">{{
-                          book.title
-                        }}</span>
-                      </h2>
-                      <span
-                        style="cursor: pointer"
-                        class="grey--text text--darken-2"
-                        @click="
-                          clicksearch(
-                            'creator:&quot;' + book.creator + '&quot;'
-                          )
-                        "
-                      >
-                        {{ book.creator }} </span
-                      ><br />
-                      <div v-html="book.description" class="text-body-1"></div>
-                      <br /><br />
-                      <h5>
-                        Published
-                        <span v-if="book.moddate"
-                          ><b>{{
-                            new Date(
-                              Date.parse(book.moddate)
-                            ).toLocaleDateString()
-                          }}</b></span
-                        ><span v-if="book.publisher">
-                          by
-                          <b
-                            ><span
-                              style="cursor: pointer"
-                              @click="
-                                clicksearch(
-                                  'publisher:&quot;' + book.publisher + '&quot;'
-                                )
-                              "
-                              class="grey--text text--darken-3"
-                              >{{ book.publisher }}</span
-                            ></b
-                          ></span
-                        >
-                      </h5>
-                    </div>
-                  </v-card-title>
-                  <v-card-actions>
-                    <v-layout row wrap justify-left>
-                      <span v-for="tag in book.subject" :key="tag">
-                        <v-btn
-                          small
-                          rounded
-                          color="grey lighten-2"
-                          @click="clicksearch('tags:&quot;/' + tag + '&quot;')"
-                          class="text-lowercase"
-                        >
-                          {{ tag }}
-                        </v-btn>
-                        <!-- there must be some better way than this nbsp uglyness -->
-                        &nbsp;
-                        <v-spacer class="v-spacer">&nbsp;</v-spacer>
-                      </span>
-                    </v-layout>
-                    <v-btn
-                        icon
-                        tile
-                        color="orange"
-                        :href="'http://localhost:8080/books/id:' + book.id"
-                    >
-                        <v-icon>link</v-icon>
-                    </v-btn>
-                    <v-tooltip bottom>
-                      <template v-slot:activator="{ on }">
-                        <v-btn
-                          text
-                          color="orange"
-                          v-on="on"
-                          @click="download(book)"
-                          >Download</v-btn
-                        >
-                      </template>
-                      <span>{{ (book.filesize / 1048576).toFixed(2) }} Mb</span>
-                    </v-tooltip>
-                    <v-btn
-                      text
-                      color="orange"
+              </v-img>-->
+              <v-card-title style="word-break: normal">
+                <div>
+                  <h2>
+                    <span class="text-black">{{
+                      book.title
+                    }}</span>
+                  </h2>
+                  <span
+                    style="cursor: pointer"
+                    class="text-grey-darken-2"
+                    @click="
+                      clicksearch(
+                        'creator:&quot;' + book.creator + '&quot;'
+                      )
+                    "
+                  >
+                    {{ book.creator }} </span
+                  ><br />
+              </div>
+              </v-card-title>
+              <!--finding out that this random property was washing out everything randomly here is why I hate UX dev-->
+              <v-card-subtitle style="--v-medium-emphasis-opacity: 1;" >
+                  <v-row>
+                    <v-col cols="3" >
+                      <v-img
+                      max-width="200"
+                      style="cursor: pointer; color: black;"
+                      :src="'http://localhost:8080/img/' + book.id"
                       @click="
-                        previewdialog = true;
-                        readEpub(book);
+                        coverid = book.id;
+                        coverdialog = true;
                       "
                     >
-                      Preview
+                      </v-img>
+                    </v-col>
+                    <v-col cols="9">
+                      <span v-html="book.description" class="text-wrap; text-black"></span>
+                    </v-col>
+                  </v-row>
+                  <br /><br />
+                  <h5>
+                    Published
+                    <span v-if="book.moddate"
+                      ><b>{{
+                        new Date(
+                          Date.parse(book.moddate)
+                        ).toLocaleDateString()
+                      }}</b></span
+                    ><span v-if="book.publisher">
+                      by
+                      <b
+                        ><span
+                          style="cursor: pointer"
+                          @click="
+                            clicksearch(
+                              'publisher:&quot;' + book.publisher + '&quot;'
+                            )
+                          "
+                          class="text-amber-darken-4"
+                          >{{ book.publisher }}.&nbsp;</span></b></span>
+                          <span class="text-black">Size: {{ (book.filesize / 1048576).toFixed(2) }} Mb</span>
+                  </h5>
+              </v-card-subtitle>
+              <v-card-actions>
+                <v-row>
+                  <v-col class="d-flex flex-wrap">
+                  <span v-for="tag in book.subject" :key="tag">
+                    <v-btn 
+                      small
+                      rounded
+                      density="compact"
+                      variant="text"
+                      color="grey-darken-1"
+                      @click="clicksearch('tags:&quot;/' + tag + '&quot;')"
+                      class="text-lowercase"
+                    >
+                      {{ tag }}
                     </v-btn>
-                  </v-card-actions>
+                  </span>
                 </v-col>
-              </v-row>
+                <v-responsive width="100%"></v-responsive>
+                <v-col >
+                <v-tooltip bottom>
+                  <template v-slot:activator="{ props }">
+                    <v-btn
+                      text
+                      color="black"
+                      prepend-icon="mdi-download"
+                      
+                      v-bind="props"
+                      @click="download(book)"
+                      >
+                      <template v-slot:prepend>
+                        <v-icon color="amber-darken-3"></v-icon>
+                      </template>
+                      Download
+                      </v-btn
+                    >
+                  </template>
+                  <span>{{ (book.filesize / 1048576).toFixed(2) }} Mb</span>
+                </v-tooltip>
+                <v-btn
+                  text
+                  color="black"
+                  prepend-icon="mdi-book-open-outline"
+                  @click="
+                    previewdialog = true;
+                    readEpub(book);
+                  "
+                >
+                  Preview
+                  <template v-slot:prepend>
+                    <v-icon color="amber-darken-3"></v-icon>
+                  </template>
+                </v-btn>
+              </v-col>
+            </v-row>
+              </v-card-actions>
             </v-card>
             <v-divider v-if="index + 1 < books.length" :key="index"></v-divider>
           </span>
@@ -134,9 +152,9 @@
             transition="dialog-bottom-transition"
           >
             <v-card style="position: relative">
-              <v-layout column fill-height>
-                <v-toolbar dark color="primary">
-                  <v-btn icon dark @click="previewdialog = false">
+              <v-row column fill-height>
+                <v-toolbar color="primary">
+                  <v-btn icon @click="previewdialog = false">
                     <v-icon>mdi-close</v-icon>
                   </v-btn>
                   <v-toolbar-title>Read book</v-toolbar-title>
@@ -145,7 +163,7 @@
                 <!--<v-container class="fill-height">-->
                 <div id="reader" style="height: 1000px; width: 100%" />
                 <!--</v-container>-->
-              </v-layout>
+              </v-row>
             </v-card>
           </v-dialog>
           <v-pagination
@@ -156,8 +174,8 @@
           >
           </v-pagination>
         </v-list>
-      </v-flex>
-    </v-layout>
+      </v-col>
+    </v-row>
     <v-dialog
       id="cdialog"
       v-model="coverdialog"
@@ -168,6 +186,7 @@
         :src="'http://' + host + ':8080/img/' + coverid"
         @click="coverdialog = false"
         style="cursor: pointer"
+        max-height="90vh"
         v-if="coverdialog"
       >
       </v-img>
@@ -175,7 +194,9 @@
   </v-container>
 </template>
 <script>
-    import { Book, Rendition } from 'epubjs';
+    import { Book, Rendition } from '@parkdoeui/epubjs';
+    import { watch } from 'vue';
+    import { useRoute } from 'vue-router';
     export default {
             data: () => ({
       drawer: null,
@@ -193,6 +214,7 @@
       errorMsg: null,
       searchtext: null,
       router:null,
+      route: useRoute(),
       host:"localhost"
     }),
     props: {
@@ -243,7 +265,6 @@
       clicksearch (param) {
         this.page=1;
         this.$router.push({ name: 'books', params: { search:param } });
-        //this.dosearchof(param);
       },
       next (page) {
         this.page=page;

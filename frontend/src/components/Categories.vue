@@ -103,7 +103,7 @@ Then plonk in pagination as well
                 case "years":
                   this.pkfield="year";
               }
-              this.$axios.get('http://' + this.host + ':8000/api/counts/' + this.type + '?query=&countorder=true&limit=200&start=' + ((this.page-1) * 200))
+              this.$axios.get('http://' + this.host + ':8080/api/counts/' + this.type + '?query=&countorder=true&limit=200&start=' + ((this.page-1) * 200))
                   .then(response => ( 
                           this.items = response.data.payload,
                           this.count = response.data.count,
@@ -116,7 +116,7 @@ Then plonk in pagination as well
             docountssearchof() {
                 this.filtertext = this.search;
                 this.errorMsg = null;
-                this.$axios.get('http://' + this.host + ':8000/api/counts/' + this.type + '?query=' + encodeURIComponent(this.search) + '&countorder=true&limit=1000&start=' + ((this.page-1) * 1000))
+                this.$axios.get('http://' + this.host + ':8080/api/counts/' + this.type + '?query=' + encodeURIComponent(this.search) + '&countorder=true&limit=1000&start=' + ((this.page-1) * 1000))
                     .then(response => ( 
                             this.items = response.data.payload,
                             this.count = response.data.count,

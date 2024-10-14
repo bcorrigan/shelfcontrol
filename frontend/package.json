@@ -1,54 +1,44 @@
 {
   "name": "shelfcontrol",
-  "version": "0.1.0",
-  "private": true,
+  "version": "0.0.0",
   "scripts": {
-    "serve": "vue-cli-service serve",
-    "build": "vue-cli-service build",
-    "lint": "vue-cli-service lint"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint . --fix --ignore-path .gitignore"
   },
   "dependencies": {
-    "axios": "^0.21.1",
-    "core-js": "^3.16",
-    "datejs": "^1.0.0-rc3",
-    "epubjs": "^0.3",
-    "jszip": "^3.7",
-    "stylus": "^0.54.8",
-    "stylus-loader": "^3.0.2",
-    "vue": "^2.6.14",
-    "vue-router": "^3.5.2",
-    "vuetify": "^2.5"
+    "@mdi/font": "^7.4.47",
+    "@parkdoeui/epubjs": "^4.0.0",
+    "axios": "^1.7.7",
+    "core-js": "^3.38.1",
+    "datejs": "1.0.0-rc3",
+    "jszip": "^3.10.1",
+    "roboto-fontface": "^0.10.0",
+    "stylus": "^0.63.0",
+    "stylus-loader": "^8.1.1",
+    "vue": "^3.5.12",
+    "vue-router": "^4.4.5",
+    "vuetify": "^3.7.2"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "~4.5.0",
-    "@vue/cli-plugin-eslint": "~4.5.0",
-    "@vue/cli-service": "~4.5.0",
-    "babel-eslint": "^10.1.0",
-    "eslint": "^7.3",
-    "eslint-plugin-vue": "^7.17",
-    "sass": "^1.38",
-    "sass-loader": "^10.1",
-    "vue-cli-plugin-vuetify": "^2.4",
-    "vue-template-compiler": "^2.6",
-    "vuetify-loader": "^1.7"
-  },
-  "eslintConfig": {
-    "root": true,
-    "env": {
-      "node": true
-    },
-    "extends": [
-      "plugin:vue/essential",
-      "eslint:recommended"
-    ],
-    "parserOptions": {
-      "parser": "babel-eslint"
-    },
-    "rules": {}
-  },
-  "browserslist": [
-    "> 1%",
-    "last 2 versions",
-    "not dead"
-  ]
+    "@vitejs/plugin-vue": "^5.1.4",
+    "eslint": "^8.57.1",
+    "eslint-config-standard": "^17.1.0",
+    "eslint-config-vuetify": "^1.0.0",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-n": "^16.6.2",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-promise": "^6.6.0",
+    "eslint-plugin-vue": "^9.29.0",
+    "pinia": "^2.2.4",
+    "sass": "1.77.6",
+    "unplugin-auto-import": "^0.17.8",
+    "unplugin-fonts": "^1.1.1",
+    "unplugin-vue-components": "^0.27.4",
+    "unplugin-vue-router": "^0.10.8",
+    "vite": "^5.4.8",
+    "vite-plugin-vue-layouts": "^0.11.0",
+    "vite-plugin-vuetify": "^2.0.4"
+  }
 }
