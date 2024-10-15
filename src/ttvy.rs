@@ -11,14 +11,13 @@ use tantivy::collector::{Collector, Count, SegmentCollector, TopDocs};
 use tantivy::directory::MmapDirectory;
 use tantivy::query::TermQuery;
 use tantivy::schema::*;
-use tantivy::store::Compressor;
 use tantivy::store::StoreReader;
 use tantivy::DocId;
 use tantivy::IndexWriter;
 use tantivy::Score;
 use tantivy::SegmentOrdinal;
 use tantivy::SegmentReader;
-use tantivy::{Index, IndexReader, IndexSettings, IndexSortByField, Order, ReloadPolicy};
+use tantivy::{Index, IndexReader, ReloadPolicy};
 
 use crate::error::StoreError;
 use crate::search_result::{Category, CategorySearchResult, SearchResult};
@@ -27,8 +26,7 @@ use crate::BookWriter;
 use ammonia::{Builder, UrlRelative};
 use futures::executor;
 use tantivy::query::QueryParser;
-use time::serde::rfc3339::deserialize;
-use time::{Duration, OffsetDateTime};
+use time::OffsetDateTime;
 
 pub struct TantivyWriter<'a> {
 	index_writer: std::sync::RwLock<IndexWriter>,
@@ -204,8 +202,6 @@ pub struct TantivyReader {
 	tags_field: Field,
 }
 
-//this returns json for all methods just now. But when OPDF is implemented should make this more generic (return structs)
-//and move JSON generation elsewhere
 impl TantivyReader {
 	pub fn new(index: String) -> Result<TantivyReader, StoreError> {
 		let path = Path::new(&index);
