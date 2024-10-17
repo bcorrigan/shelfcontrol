@@ -10,20 +10,6 @@
           </v-list-subheader>
           <span v-for="(book, index) in books" :key="book.id">
             <v-card style="word-break: normal">
-              <!--<v-img
-                      class="white--text"
-                      height="400"
-                      color="surface-variant"
-                      cover="false"
-                      contain="false"
-                      style="cursor: pointer"
-                      :src="'http://localhost:8080/img/' + book.id"
-                      @click="
-                        coverid = book.id;
-                        coverdialog = true;
-                      "
-                    >
-              </v-img>-->
               <v-card-title style="word-break: normal">
                 <div>
                   <h2>
@@ -51,7 +37,7 @@
                       <v-img
                       max-width="200"
                       style="cursor: pointer; color: black;"
-                      :src="'http://localhost:8080/img/' + book.id"
+                      :src="this.host + '/img/' + book.id"
                       @click="
                         coverid = book.id;
                         coverdialog = true;
@@ -183,7 +169,7 @@
     >
       <v-img
         class="white--text"
-        :src="'http://' + host + ':8080/img/' + coverid"
+        :src="this.host + '/img/' + coverid"
         @click="coverdialog = false"
         style="cursor: pointer"
         max-height="90vh"
@@ -200,7 +186,6 @@
     export default {
             data: () => ({
       drawer: null,
-
       coverid: 0,
       readerKey: 0,
       books: null,
@@ -214,20 +199,20 @@
       errorMsg: null,
       searchtext: null,
       router:null,
-      route: useRoute(),
-      host:"localhost"
+      route: useRoute()
     }),
     props: {
       source: String
     },
     mounted () {
-      this.host = window.location.hostname;
+      this.hostbase = window.location.hostname;
+      this.host = import.meta.env.VITE_SCHEME + '://' + this.hostbase + import.meta.env.VITE_PORT;
       var loadParams = this.$route.params.search;
       if(loadParams==undefined || loadParams.trim()=="") {
           loadParams='*';
       }
       this.$axios
-        .get('http://' + this.host + ':8080/api/search?query=' + encodeURIComponent(loadParams) + '&limit=20')
+        .get(this.host + '/api/search?query=' + encodeURIComponent(loadParams) + '&limit=20')
         .then(response => (this.books = response.data.payload , this.count = response.data.count, this.lastquery = response.data.query, this.position = response.data.position, this.$emit('bookSearch', response.data.query)));
     },
     watch: {
@@ -244,7 +229,7 @@
         this.errorMsg=null;
         window.scrollTo(0,0);
         this.$axios
-        .get('http://' + this.host + ':8080/api/search?query=' + encodeURIComponent(param) + '&limit=20&start='+ ((this.page-1)*20))
+        .get(this.host + '/api/search?query=' + encodeURIComponent(param) + '&limit=20&start='+ ((this.page-1)*20))
         .then(response =>
           (this.books = response.data.payload,
           this.count = response.data.count,
@@ -285,7 +270,7 @@
           }
         }
 
-        var epub = new Book("http://" + this.host + ":8080/api/book/" + book.id + ".epub", { openAs: "epub" });
+        var epub = new Book(this.host + "/api/book/" + book.id + ".epub", { openAs: "epub" });
         this.rendition = new Rendition(epub, {
           manager: "continuous",
           flow: "scrolled",
@@ -305,7 +290,7 @@
           });
       },
       download(book) {
-        this.$axios.get("http://" + this.host + ":8080/api/book/" + book.id,
+        this.$axios.get(this.host + "/api/book/" + book.id,
         {
             responseType: 'arraybuffer',
             headers: {

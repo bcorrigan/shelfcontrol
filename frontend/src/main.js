@@ -15,7 +15,7 @@ import Books from './components/Books.vue';
 import Categories from './components/Categories.vue';
 
 const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(import.meta.env.VITE_BASE_URL),
   routes: [
     { path: '/books/:search?', name: "books", component: Books, props: true },
     { path: '/categories/:type?', name: "categories", component: Categories, props: true  },

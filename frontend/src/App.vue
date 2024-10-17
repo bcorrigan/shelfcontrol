@@ -90,6 +90,9 @@
      },
     methods: {
       dosearch() {
+        if(this.searchtext=="") {
+          this.searchtext="*";
+        }
         this.$router.push({ name: 'books', params: { search:this.searchtext} });
       },
       setSearchField(term) {
