@@ -38,10 +38,7 @@ Then plonk in pagination as well
 <script>
     export default {
         data () {
-          this.hostbase = window.location.hostname;
-          this.port = import.meta.env.VITE_PORT;
-          this.scheme = import.meta.env.VITE_SCHEME;
-          this.host = this.scheme + "://" + this.hostbase + this.port;
+          this.host = import.meta.env.VITE_SCHEME + "://" + window.location.hostname + import.meta.env.VITE_PORT ;
             return {
                 type: null,
                 pkfield: null,

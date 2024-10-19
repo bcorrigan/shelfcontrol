@@ -48,8 +48,6 @@ export default defineConfig({
   ],
   define: { 'process.env': {} },
   myurl: process.env.VITE_BASE_URL,
-  scheme: process.env.VITE_SCHEME,
-  port: process.env.VITE_PORT,
   base: "./",
   resolve: {
     alias: {

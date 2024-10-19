@@ -31,7 +31,7 @@
               </div>
               </v-card-title>
               <!--finding out that this random property was washing out everything randomly here is why I hate UX dev-->
-              <v-card-subtitle style="--v-medium-emphasis-opacity: 1;" >
+              <v-card-subtitle style="white-space:break-spaces; --v-medium-emphasis-opacity: 1; " >
                   <v-row>
                     <v-col cols="3" >
                       <v-img
@@ -45,8 +45,8 @@
                     >
                       </v-img>
                     </v-col>
-                    <v-col cols="9">
-                      <span v-html="book.description" class="text-wrap; text-black"></span>
+                    <v-col cols="9" class="white-space: normal; word-break: break-word; text-wrap; text-black">
+                      <span v-html="book.description" class="white-space: normal; word-break: break-word; text-wrap; text-black"></span>
                     </v-col>
                   </v-row>
                   <br /><br />
@@ -205,8 +205,7 @@
       source: String
     },
     mounted () {
-      this.hostbase = window.location.hostname;
-      this.host = import.meta.env.VITE_SCHEME + '://' + this.hostbase + import.meta.env.VITE_PORT;
+      this.host = import.meta.env.VITE_SCHEME + '://' + window.location.hostname + import.meta.env.VITE_PORT;
       var loadParams = this.$route.params.search;
       if(loadParams==undefined || loadParams.trim()=="") {
           loadParams='*';
