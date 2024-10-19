@@ -3,12 +3,12 @@
     <v-row align-center >
       <v-col>
         <span v-html="errorMsg"></span>
-        <v-list two-line >
+        <v-list lines="two" >
           <v-list-subheader v-if="count" :key="count" inset id="resultList">
             {{ position + 1 }}-{{ Math.min(position + 20, count) }} of
             {{ count }} results for "{{ lastquery }}"
           </v-list-subheader>
-          <span v-for="(book, index) in books" :key="book.id">
+          <v-list-item v-for="(book, index) in books" :key="book.id">
             <v-card style="word-break: normal">
               <v-card-title style="word-break: normal">
                 <div>
@@ -130,7 +130,7 @@
               </v-card-actions>
             </v-card>
             <v-divider v-if="index + 1 < books.length" :key="index"></v-divider>
-          </span>
+          </v-list-item>
           <v-dialog
             v-model="previewdialog"
             fullscreen
