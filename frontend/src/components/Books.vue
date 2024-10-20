@@ -3,18 +3,19 @@
     <v-row align-center >
       <v-col>
         <span v-html="errorMsg"></span>
-        <v-list lines="two" >
-          <v-list-subheader v-if="count" :key="count" inset id="resultList">
-            {{ position + 1 }}-{{ Math.min(position + 20, count) }} of
+        <v-data-iterator :items="books" :items-per-page="this.pageSize" >
+          <template v-slot:default="{items}">
+            <v-list-subheader v-if="count" :key="count" inset id="resultList">
+            {{ position + 1 }}-{{ Math.min(position + this.pageSize, count) }} of
             {{ count }} results for "{{ lastquery }}"
           </v-list-subheader>
-          <v-list-item v-for="(book, index) in books" :key="book.id">
+          <v-list-item v-for="(book, index) in items" :key="book.raw.id">
             <v-card style="word-break: normal">
               <v-card-title style="word-break: normal">
                 <div>
                   <h2>
                     <span class="text-black">{{
-                      book.title
+                      book.raw.title
                     }}</span>
                   </h2>
                   <span
@@ -22,11 +23,11 @@
                     class="text-grey-darken-2"
                     @click="
                       clicksearch(
-                        'creator:&quot;' + book.creator + '&quot;'
+                        'creator:&quot;' + book.raw.creator + '&quot;'
                       )
                     "
                   >
-                    {{ book.creator }} </span
+                    {{ book.raw.creator }} </span
                   ><br />
               </div>
               </v-card-title>
@@ -37,46 +38,46 @@
                       <v-img
                       max-width="200"
                       style="cursor: pointer; color: black;"
-                      :src="this.host + '/img/' + book.id"
+                      :src="this.host + '/img/' + book.raw.id"
                       @click="
-                        coverid = book.id;
+                        coverid = book.raw.id;
                         coverdialog = true;
                       "
                     >
                       </v-img>
                     </v-col>
                     <v-col cols="9" class="white-space: normal; word-break: break-word; text-wrap; text-black">
-                      <span v-html="book.description" class="white-space: normal; word-break: break-word; text-wrap; text-black"></span>
+                      <span v-html="book.raw.description" class="white-space: normal; word-break: break-word; text-wrap; text-black"></span>
                     </v-col>
                   </v-row>
                   <br /><br />
                   <h5>
                     Published
-                    <span v-if="book.moddate"
+                    <span v-if="book.raw.moddate"
                       ><b>{{
                         new Date(
-                          Date.parse(book.moddate)
+                          Date.parse(book.raw.moddate)
                         ).toLocaleDateString()
                       }}</b></span
-                    ><span v-if="book.publisher">
+                    ><span v-if="book.raw.publisher">
                       by
                       <b
                         ><span
                           style="cursor: pointer"
                           @click="
                             clicksearch(
-                              'publisher:&quot;' + book.publisher + '&quot;'
+                              'publisher:&quot;' + book.raw.publisher + '&quot;'
                             )
                           "
                           class="text-amber-darken-4"
-                          >{{ book.publisher }}.&nbsp;</span></b></span>
-                          <span class="text-black">Size: {{ (book.filesize / 1048576).toFixed(2) }} Mb</span>
+                          >{{ book.raw.publisher }}.&nbsp;</span></b></span>
+                          <span class="text-black">Size: {{ (book.raw.filesize / 1048576).toFixed(2) }} Mb</span>
                   </h5>
               </v-card-subtitle>
               <v-card-actions>
                 <v-row>
                   <v-col class="d-flex flex-wrap">
-                  <span v-for="tag in book.subject" :key="tag">
+                  <span v-for="tag in book.raw.subject" :key="tag">
                     <v-btn 
                       small
                       rounded
@@ -100,7 +101,7 @@
                       prepend-icon="mdi-download"
                       
                       v-bind="props"
-                      @click="download(book)"
+                      @click="download(book.raw)"
                       >
                       <template v-slot:prepend>
                         <v-icon color="amber-darken-3"></v-icon>
@@ -109,7 +110,7 @@
                       </v-btn
                     >
                   </template>
-                  <span>{{ (book.filesize / 1048576).toFixed(2) }} Mb</span>
+                  <span>{{ (book.raw.filesize / 1048576).toFixed(2) }} Mb</span>
                 </v-tooltip>
                 <v-btn
                   text
@@ -117,7 +118,7 @@
                   prepend-icon="mdi-book-open-outline"
                   @click="
                     previewdialog = true;
-                    readEpub(book);
+                    readEpub(book.raw);
                   "
                 >
                   Preview
@@ -129,7 +130,7 @@
             </v-row>
               </v-card-actions>
             </v-card>
-            <v-divider v-if="index + 1 < books.length" :key="index"></v-divider>
+            <v-divider v-if="index + 1 < items.length" :key="index"></v-divider>
           </v-list-item>
           <v-dialog
             v-model="previewdialog"
@@ -154,12 +155,13 @@
           </v-dialog>
           <v-pagination
             v-model="page"
-            :length="Math.ceil(count / 20)"
+            :length="Math.ceil(count / this.pageSize)"
             :total-visible="15"
-            @input="next"
+            @update:model-value="next"
           >
           </v-pagination>
-        </v-list>
+        </template>
+        </v-data-iterator>
       </v-col>
     </v-row>
     <v-dialog
@@ -188,10 +190,11 @@
       drawer: null,
       coverid: 0,
       readerKey: 0,
-      books: null,
+      books: [],
       isReady: false,
       count: 0,
       page: 1,
+      pageSize: import.meta.env.VITE_PAGE_SIZE,
       position: 0,
       lastquery: null,
       coverdialog: null,
@@ -228,7 +231,7 @@
         this.errorMsg=null;
         window.scrollTo(0,0);
         this.$axios
-        .get(this.host + '/api/search?query=' + encodeURIComponent(param) + '&limit=20&start='+ ((this.page-1)*20))
+        .get(this.host + '/api/search?query=' + encodeURIComponent(param) + '&limit=' + this.pageSize + '&start='+ ((this.page-1)*this.pageSize))
         .then(response =>
           (this.books = response.data.payload,
           this.count = response.data.count,
