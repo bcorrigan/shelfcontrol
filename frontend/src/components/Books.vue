@@ -4,11 +4,13 @@
       <v-col>
         <span v-html="errorMsg"></span>
         <v-data-iterator :items="books" :items-per-page="this.pageSize" >
-          <template v-slot:default="{items}">
+          <template v-slot:header="">
             <v-list-subheader v-if="count" :key="count" inset id="resultList">
             {{ position + 1 }}-{{ Math.min(position + this.pageSize, count) }} of
             {{ count }} results for "{{ lastquery }}"
           </v-list-subheader>
+          </template>
+          <template v-slot:default="{items}">
           <v-list-item v-for="(book, index) in items" :key="book.raw.id">
             <v-card style="word-break: normal">
               <v-card-title style="word-break: normal">
@@ -153,13 +155,15 @@
               </v-row>
             </v-card>
           </v-dialog>
-          <v-pagination
-            v-model="page"
-            :length="Math.ceil(count / this.pageSize)"
-            :total-visible="15"
-            @update:model-value="next"
-          >
-          </v-pagination>
+          </template>
+          <template v-slot:footer="">
+            <v-pagination
+              v-model="page"
+              :length="Math.ceil(count / this.pageSize)"
+              :total-visible="15"
+              @update:model-value="next"
+            >
+            </v-pagination>
         </template>
         </v-data-iterator>
       </v-col>
