@@ -1,6 +1,6 @@
  <template>
   <v-app id="shelfcontrol">
-    <v-app-bar color="amber" clipped-left app>
+    <v-app-bar color="amber" clipped-left app ref="appBar">
       <v-app-bar-nav-icon @click="drawer = !drawer"></v-app-bar-nav-icon>
       <span class="text-h5 ml-3 mr-5">Shelf&nbsp;<span class="font-weight-light">Control</span></span>
       <v-text-field
@@ -64,7 +64,7 @@
 
 <script>
   //import router from '@/router'
-
+  import { useAppBarHeight } from './components/useAppBarHeight'
   export default {
     data: () => ({
       searchtext:"*",
@@ -86,14 +86,19 @@
       if(loadParams==undefined || loadParams.trim()=="") {
           loadParams='*';
       }
-       this.$router.push({ name: 'books', params: { search:loadParams} });
+      this.setAppBarHeight(this.$refs.appBar.$el.offsetHeight)
+      this.$router.push({ name: 'books', params: { search:loadParams } });
      },
+     setup() {
+      const { setAppBarHeight } = useAppBarHeight()
+      return { setAppBarHeight }
+    },
     methods: {
       dosearch() {
         if(this.searchtext=="") {
           this.searchtext="*";
         }
-        this.$router.push({ name: 'books', params: { search:this.searchtext} });
+        this.$router.push({ name: 'books', params: { search:this.searchtext } });
       },
       setSearchField(term) {
         this.searchtext=term;

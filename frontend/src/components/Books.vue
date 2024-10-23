@@ -1,9 +1,9 @@
 <template>
-  <v-container fluid fill-height >
+  <v-container fluid fill-height  >
     <v-row align-center >
       <v-col>
         <span v-html="errorMsg"></span>
-        <v-data-iterator :items="books" :items-per-page="this.pageSize" >
+        <v-data-iterator :items="books" :items-per-page="this.pageSize">
           <template v-slot:header="">
             <v-list-subheader v-if="count" :key="count" inset id="resultList">
             {{ position + 1 }}-{{ Math.min(position + this.pageSize, count) }} of
@@ -11,10 +11,10 @@
           </v-list-subheader>
           </template>
           <template v-slot:default="{items}">
-          <v-list-item v-for="(book, index) in items" :key="book.raw.id">
+          <v-list-item v-for="(book, index) in items" :key="book.raw.id" :ref="'card-' + index" >
             <v-card style="word-break: normal">
               <v-card-title style="word-break: normal">
-                <div>
+                <div :id="index" style="scroll-margin-top: 100px;">
                   <h2>
                     <span class="text-black">{{
                       book.raw.title
@@ -189,6 +189,7 @@
     import { Book, Rendition } from '@parkdoeui/epubjs';
     import { watch } from 'vue';
     import { useRoute } from 'vue-router';
+    import { useAppBarHeight } from './useAppBarHeight';
     export default {
             data: () => ({
       drawer: null,
@@ -206,13 +207,19 @@
       errorMsg: null,
       searchtext: null,
       router:null,
-      route: useRoute()
+      route: useRoute(),
+      selectedIndex: 0
     }),
     props: {
       source: String
     },
+    setup() {
+      const { appBarHeight } = useAppBarHeight();
+      return { appBarHeight }
+    },
     mounted () {
       this.host = import.meta.env.VITE_SCHEME + '://' + window.location.hostname + import.meta.env.VITE_PORT;
+      document.addEventListener( "keydown", this.handleKeyDown );
       var loadParams = this.$route.params.search;
       if(loadParams==undefined || loadParams.trim()=="") {
           loadParams='*';
@@ -223,6 +230,7 @@
     },
     watch: {
       $route(to, from) {
+        console.log("route change2");
         //to and from are route objects
         this.searchtext=to.params.search;
         this.lastquery=from.params.search;
@@ -233,7 +241,9 @@
       dosearchof (param) {
         this.searchtext = param;
         this.errorMsg=null;
-        window.scrollTo(0,0);
+        if(this.selectedIndex==0) {
+          window.scrollTo(0,0);
+        }
         this.$axios
         .get(this.host + '/api/search?query=' + encodeURIComponent(param) + '&limit=' + this.pageSize + '&start='+ ((this.page-1)*this.pageSize))
         .then(response =>
@@ -242,9 +252,15 @@
           this.lastquery = response.data.query,
           this.position = response.data.position,
           this.$emit('bookSearch', response.data.query),
-          this.zeroResult()
+          this.zeroResult(),
+          this.gotoIndex()
           )
         )
+      },
+      gotoIndex() {
+        //if(this.selectedIndex!=0) {
+            location.hash = "#" + this.selectedIndex;
+        //}
       },
       dosearch () {
         //change event sometimes lies - it is fired even when text is not changed since last time
@@ -255,12 +271,57 @@
       },
       clicksearch (param) {
         this.page=1;
-        this.$router.push({ name: 'books', params: { search:param } });
+        this.$router.push({ name: 'books', params: { search:param} });
       },
-      next (page) {
-        this.page=page;
+      nextByKey (topage) {
+        console.log("topage:" + topage + ":this.page:" + this.page);
+        if(topage>this.page) {
+          this.selectedIndex=0;
+        } else {
+          this.selectedIndex=this.pageSize-1;
+        }
+        this.page=topage;
         this.dosearchof(this.lastquery);
       },
+      next(topage) {
+        this.page=topage;
+        this.selectedIndex=0;
+        this.dosearchof(this.lastquery);
+      },
+      scrollToCard() {
+        const cardRef = this.$refs[`card-${this.selectedIndex}`]
+        if (cardRef && cardRef[0]) {
+          //cardRef[0].$el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+          const cardPosition = cardRef[0].$el.getBoundingClientRect().top + window.scrollY - this.appBarHeight;
+          console.log("pos:" + cardPosition + ":index:" + this.selectedIndex + ":appBarY:" + this.appBarHeight);
+          window.scrollTo({top: cardPosition, behaviour: "smooth"});
+        }
+      },
+      handlePageDown() {
+        this.selectedIndex=this.selectedIndex+1;
+          if(this.selectedIndex>this.pageSize) {
+            this.nextByKey(this.page+1);
+          } else {
+            this.scrollToCard();
+          }
+      },
+      handlePageUp() {
+        this.selectedIndex=this.selectedIndex-1;
+        if(this.selectedIndex<=0) {
+          this.nextByKey(this.page-1);
+        } else {
+          this.scrollToCard();
+        }
+      },
+      handleKeyDown(event) {
+        if (event.key === 'PageDown') {
+          event.preventDefault();
+          this.handlePageDown();
+        } else if (event.key === 'PageUp') {
+          event.preventDefault();
+          this.handlePageUp();
+        }
+    },
       zeroResult () {
         if(this.count==0) {
           this.errorMsg='<h3>No results for "<b>' + this.lastquery + '</b>"</h3><p/>&nbsp;<p/>&nbsp;<p/>&nbsp;<p/>&nbsp;';
